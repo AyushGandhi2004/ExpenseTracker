@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, Search, SlidersHorizontal, X } from "lucide-react";
+import { CalendarDays, Download, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { FormField } from "@/components/form-field";
 import { FormSheet } from "@/components/form-sheet";
@@ -109,6 +109,17 @@ export function TransactionsToolbar({ filters, options }: { filters: Transaction
             </span>
           )}
         </button>
+      </div>
+
+      <div className="flex justify-end">
+        <a
+          href={`/api/v1/export${buildQuery(filters)}`}
+          download
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <Download className="size-4" aria-hidden />
+          Export CSV
+        </a>
       </div>
 
       {chips.length > 0 && (

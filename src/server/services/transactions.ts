@@ -344,6 +344,13 @@ export async function listTransactions(userId: string, filters: TransactionFilte
   return { items, hasMore, limit, summary, dayTotals };
 }
 
+/** Every transaction matching the filters, oldest first (for CSV export; no paging). */
+export async function exportTransactions(userId: string, filters: TransactionFilters) {
+  return listQuery()
+    .where(and(...filterConditions(userId, filters)))
+    .orderBy(transactions.txnDate, transactions.createdAt);
+}
+
 /** Largest expenses in a date range. */
 export async function listTopExpenses(userId: string, from: string, to: string, limit = 5) {
   return listQuery()

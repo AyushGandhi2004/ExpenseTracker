@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, CreditCard, Landmark, LogOut, Tags, type LucideIcon } from "lucide-react";
+import { ChevronRight, CreditCard, Download, Landmark, LogOut, Tags, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/server/auth";
 import { listAccounts } from "@/server/services/accounts";
 import { listCategories } from "@/server/services/categories";
 import { listPaymentMethods } from "@/server/services/payment-methods";
+import { AppearancePicker } from "./appearance";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -39,6 +40,22 @@ export default async function SettingsPage() {
           </li>
         ))}
       </ul>
+
+      <h2 className="mt-8 mb-2 px-1 text-sm font-medium text-muted-foreground">Appearance</h2>
+      <AppearancePicker />
+
+      <h2 className="mt-8 mb-2 px-1 text-sm font-medium text-muted-foreground">Your data</h2>
+      <a
+        href="/api/v1/export"
+        download
+        className="flex min-h-14 items-center gap-3 rounded-xl border px-4 py-3 hover:bg-muted/60"
+      >
+        <Download className="size-5 text-muted-foreground" aria-hidden />
+        <span className="flex flex-1 flex-col">
+          <span className="font-medium">Export all transactions</span>
+          <span className="text-xs text-muted-foreground">CSV file for Excel or Google Sheets</span>
+        </span>
+      </a>
 
       <div className="mt-8 rounded-xl border px-4 py-3">
         <p className="text-xs text-muted-foreground">Signed in as</p>

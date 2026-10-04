@@ -36,6 +36,9 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
+  // Mobile/API clients authenticate with a Bearer token, verified by the route itself.
+  const hasBearer = pathname.startsWith("/api/v1/") && /^Bearer\s+\S+/i.test(request.headers.get("authorization") ?? "");
+  if (hasBearer) return response;
 
   if (!signedIn && !isPublic) {
     if (pathname.startsWith("/api/")) {
@@ -59,5 +62,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Skip static assets and image optimisation.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)"],
 };

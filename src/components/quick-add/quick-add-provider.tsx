@@ -25,6 +25,8 @@ import { formatINR } from "@/lib/money";
 import type { QuickAddOptions } from "@/server/services/quick-add";
 import { QuickAddSheet, type EditableExpense } from "./quick-add-sheet";
 
+const RETRY_MS = 30_000;
+
 const expenseQueue = createExpenseQueue(() => {
   try {
     return typeof window === "undefined" ? null : window.localStorage;
@@ -98,6 +100,16 @@ export function QuickAddProvider({ options, children }: { options: QuickAddOptio
       window.removeEventListener("storage", onStorage);
     };
   }, [syncNow]);
+
+  // Retry periodically while entries wait (covers server outages, where no "online" event fires).
+  const hasPending = pending.some((p) => p.status === "pending");
+  useEffect(() => {
+    if (!hasPending) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void syncNow();
+    }, RETRY_MS);
+    return () => clearInterval(timer);
+  }, [hasPending, syncNow]);
 
   const enqueue = useCallback(
     (item: PendingExpense) => {
