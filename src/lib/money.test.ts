@@ -8,13 +8,15 @@ describe("formatINR", () => {
   });
 
   it("shows paise only when present", () => {
-    expect(formatINR(14950)).toBe("₹149.5");
+    expect(formatINR(14950)).toBe("₹149.50");
+    expect(formatINR(12345650)).toBe("₹1,23,456.50");
     expect(formatINR(14955)).toBe("₹149.55");
     expect(formatINR(0)).toBe("₹0");
   });
 
   it("handles negatives", () => {
     expect(formatINR(-25000)).toBe("-₹250");
+    expect(formatINR(-205)).toBe("-₹2.05");
   });
 });
 

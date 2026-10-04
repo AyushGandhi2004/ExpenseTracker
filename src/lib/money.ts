@@ -1,9 +1,16 @@
 /** Money helpers. All amounts are stored and passed around as integer paise. */
 
-const inr = new Intl.NumberFormat("en-IN", {
+const inrWhole = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
   minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+const inrPaise = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
@@ -14,9 +21,9 @@ const inrCompact = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 1,
 });
 
-/** 12345650 → "₹1,23,456.5" ; whole rupees drop the decimals: 10000 → "₹100". */
+/** 12345650 → "₹1,23,456.50" ; whole rupees drop the decimals: 10000 → "₹100". */
 export function formatINR(paise: number): string {
-  return inr.format(paise / 100);
+  return (paise % 100 === 0 ? inrWhole : inrPaise).format(paise / 100);
 }
 
 /** For chart axes: 12345600 → "₹1.2L". */
