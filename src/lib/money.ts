@@ -14,21 +14,31 @@ const inrPaise = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 });
 
-const inrCompact = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
 /** 12345650 → "₹1,23,456.50" ; whole rupees drop the decimals: 10000 → "₹100". */
 export function formatINR(paise: number): string {
   return (paise % 100 === 0 ? inrWhole : inrPaise).format(paise / 100);
 }
 
-/** For chart axes: 12345600 → "₹1.2L". */
+const COMPACT_UNITS = [
+  { value: 1_00_00_000, suffix: "Cr" },
+  { value: 1_00_000, suffix: "L" },
+  { value: 1_000, suffix: "K" },
+] as const;
+
+/**
+ * For chart axes, in Indian units: 1000000 → "₹10K", 12345600 → "₹1.23L".
+ * Hand-rolled because Intl's compact notation differs between Node and browsers
+ * ("₹10.0K" vs "₹10K"), which breaks server/client hydration.
+ */
 export function formatINRCompact(paise: number): string {
-  return inrCompact.format(paise / 100);
+  const rupees = paise / 100;
+  const sign = rupees < 0 ? "-" : "";
+  const abs = Math.abs(rupees);
+  const unit = COMPACT_UNITS.find((u) => abs >= u.value);
+  if (!unit) return `${sign}₹${Math.round(abs)}`;
+  // Up to two decimals, trailing zeros dropped: 1.25K, 2.5K, 10K.
+  const scaled = Math.round((abs / unit.value) * 100) / 100;
+  return `${sign}₹${scaled}${unit.suffix}`;
 }
 
 /**

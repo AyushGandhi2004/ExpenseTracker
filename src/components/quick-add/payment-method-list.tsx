@@ -2,12 +2,10 @@
 
 import { Check, ChevronLeft } from "lucide-react";
 import { AppIcon } from "@/components/app-icon";
-import { PAYMENT_KIND_ICON } from "@/lib/validators/settings";
+import { paymentMethodIcon } from "@/lib/validators/settings";
 import type { QuickAddOptions } from "@/server/services/quick-add";
 
 type Method = QuickAddOptions["paymentMethods"][number];
-
-export const paymentMethodIcon = (kind: string) => PAYMENT_KIND_ICON[kind as keyof typeof PAYMENT_KIND_ICON];
 
 /** Full-height list shown inside the quick-add sheet when choosing how you paid. */
 export function PaymentMethodList({

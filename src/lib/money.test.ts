@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatINR, paiseToRupeesString, parseRupeesToPaise } from "./money";
+import { formatINR, formatINRCompact, paiseToRupeesString, parseRupeesToPaise } from "./money";
 
 describe("formatINR", () => {
   it("uses Indian digit grouping", () => {
@@ -53,5 +53,21 @@ describe("paiseToRupeesString", () => {
 
   it("formats negatives", () => {
     expect(paiseToRupeesString(-205)).toBe("-2.05");
+  });
+});
+
+describe("formatINRCompact", () => {
+  it.each([
+    [0, "₹0"],
+    [50000, "₹500"],
+    [500000, "₹5K"],
+    [1000000, "₹10K"],
+    [250000, "₹2.5K"],
+    [12345600, "₹1.23L"],
+    [125000, "₹1.25K"],
+    [1000000000, "₹1Cr"],
+    [-250000, "-₹2.5K"],
+  ])("%d paise → %s", (paise, expected) => {
+    expect(formatINRCompact(paise)).toBe(expected);
   });
 });

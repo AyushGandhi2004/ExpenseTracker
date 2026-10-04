@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   addMonths,
+  dashboardPeriod,
+  eachDay,
   daysInRange,
   endOfMonth,
   formatDayLabel,
   formatMonthLabel,
+  formatRangeLabel,
   formatShortDay,
+  formatShortMonthLabel,
   monthGrid,
   presetRange,
   startOfWeek,
@@ -94,5 +98,59 @@ describe("monthGrid", () => {
 describe("formatShortDay", () => {
   it("shows day and month", () => {
     expect(formatShortDay("2026-09-23")).toMatch(/^23 Sep/);
+  });
+});
+
+describe("dashboardPeriod", () => {
+  const today = "2026-10-04";
+
+  it("current month stops at today and compares with the same days last month", () => {
+    const p = dashboardPeriod("month", today, today);
+    expect(p).toMatchObject({ from: "2026-10-01", to: today, end: "2026-10-31", isCurrent: true });
+    expect(p.compare).toEqual({ from: "2026-09-01", to: "2026-09-04" });
+    expect(p.prevAnchor).toBe("2026-09-01");
+    expect(p.nextAnchor).toBeNull();
+  });
+
+  it("a past month runs to its end and compares with the whole previous month (Sep vs all of Aug)", () => {
+    const p = dashboardPeriod("month", "2026-09-15", today);
+    expect(p).toMatchObject({ from: "2026-09-01", to: "2026-09-30", isCurrent: false });
+    expect(p.compare).toEqual({ from: "2026-08-01", to: "2026-08-31" });
+    expect(p.nextAnchor).toBe("2026-10-01");
+  });
+
+  it("caps the comparison at the previous period's end (Mar 31 vs Feb)", () => {
+    const p = dashboardPeriod("month", "2026-03-10", "2026-04-02");
+    expect(p.compare).toEqual({ from: "2026-02-01", to: "2026-02-28" });
+  });
+
+  it("weeks run Monday to Sunday", () => {
+    const p = dashboardPeriod("week", today, today);
+    expect(p).toMatchObject({ from: "2026-09-28", to: today, end: "2026-10-04" });
+    expect(p.compare).toEqual({ from: "2026-09-21", to: "2026-09-27" });
+  });
+});
+
+describe("eachDay", () => {
+  it("lists days inclusively across months", () => {
+    expect(eachDay("2026-09-29", "2026-10-02")).toEqual(["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"]);
+  });
+});
+
+describe("formatRangeLabel", () => {
+  it("compacts ranges within a month", () => {
+    expect(formatRangeLabel("2026-09-01", "2026-09-04")).toMatch(/^1–4 Sep/);
+  });
+  it("spells out both ends across months", () => {
+    expect(formatRangeLabel("2026-09-28", "2026-10-04")).toMatch(/^28 Sep.* – 4 Oct$/);
+  });
+  it("handles a single day", () => {
+    expect(formatRangeLabel("2026-10-04", "2026-10-04")).toBe("4 Oct");
+  });
+});
+
+describe("formatShortMonthLabel", () => {
+  it("abbreviates the month", () => {
+    expect(formatShortMonthLabel("2026-09-15")).toMatch(/^Sep.* 2026$/);
   });
 });

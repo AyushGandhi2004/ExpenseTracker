@@ -124,3 +124,69 @@ const shortDayFormatter = new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", da
 export function formatShortDay(d: IsoDate): string {
   return shortDayFormatter.format(parse(d));
 }
+
+export type PeriodKind = "week" | "month";
+
+export type DashboardPeriod = {
+  kind: PeriodKind;
+  from: IsoDate;
+  /** Last day shown: the period end, or today for the current period. */
+  to: IsoDate;
+  /** Full period end (for navigation and chart axes). */
+  end: IsoDate;
+  isCurrent: boolean;
+  /** Same number of days at the start of the previous period, for a fair comparison. */
+  compare: DateRange;
+  prevAnchor: IsoDate;
+  nextAnchor: IsoDate | null;
+};
+
+/**
+ * A week (Mon–Sun) or calendar month containing `anchor`. The current period stops at
+ * today and is compared with the same elapsed days of the previous one (Oct 1–4 vs Sep 1–4);
+ * a finished period is compared with the whole previous period.
+ */
+export function dashboardPeriod(kind: PeriodKind, anchor: IsoDate, today: IsoDate = todayIst()): DashboardPeriod {
+  const from = kind === "week" ? startOfWeek(anchor) : startOfMonth(anchor);
+  const end = kind === "week" ? addDays(from, 6) : endOfMonth(from);
+  const isCurrent = from <= today && today <= end;
+  const to = isCurrent ? today : end;
+
+  const prevFrom = kind === "week" ? addDays(from, -7) : addMonths(from, -1);
+  const prevEnd = kind === "week" ? addDays(prevFrom, 6) : endOfMonth(prevFrom);
+  // A finished period compares with the whole previous one.
+  const compareTo = isCurrent ? addDays(prevFrom, daysInRange(from, to) - 1) : prevEnd;
+
+  const nextFrom = kind === "week" ? addDays(from, 7) : addMonths(from, 1);
+  return {
+    kind,
+    from,
+    to,
+    end,
+    isCurrent,
+    compare: { from: prevFrom, to: compareTo < prevEnd ? compareTo : prevEnd },
+    prevAnchor: prevFrom,
+    nextAnchor: nextFrom <= today ? nextFrom : null,
+  };
+}
+
+/** Every date from `from` to `to`, inclusive. */
+export function eachDay(from: IsoDate, to: IsoDate): IsoDate[] {
+  const days: IsoDate[] = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
+  return days;
+}
+
+/** "1–4 Sept", or "29 Sept – 4 Oct" across months. */
+export function formatRangeLabel(from: IsoDate, to: IsoDate): string {
+  if (from === to) return formatShortDay(from);
+  if (from.slice(0, 7) === to.slice(0, 7)) return `${Number(from.slice(8))}–${formatShortDay(to)}`;
+  return `${formatShortDay(from)} – ${formatShortDay(to)}`;
+}
+
+const shortMonthFormatter = new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", month: "short", year: "numeric" });
+
+/** "Sept 2026" — for tight headers. */
+export function formatShortMonthLabel(d: IsoDate): string {
+  return shortMonthFormatter.format(parse(startOfMonth(d)));
+}

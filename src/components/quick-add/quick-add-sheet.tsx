@@ -18,7 +18,8 @@ import type { QuickAddOptions } from "@/server/services/quick-add";
 import { AmountKeypad } from "./amount-keypad";
 import { CalendarView } from "./calendar-view";
 import { DateChooser } from "./date-chooser";
-import { PaymentMethodList, paymentMethodIcon } from "./payment-method-list";
+import { paymentMethodIcon } from "@/lib/validators/settings";
+import { PaymentMethodList } from "./payment-method-list";
 
 /** An existing expense opened for editing. Names travel with it in case they were archived since. */
 export type EditableExpense = {

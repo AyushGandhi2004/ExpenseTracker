@@ -72,3 +72,5 @@ export const PAYMENT_KIND_ICON = {
   credit_card: "credit-card",
   wallet: "wallet",
 } as const;
+
+export const paymentMethodIcon = (kind: string) => PAYMENT_KIND_ICON[kind as keyof typeof PAYMENT_KIND_ICON] ?? "wallet";

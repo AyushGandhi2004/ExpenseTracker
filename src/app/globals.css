@@ -22,6 +22,15 @@
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
+  --color-viz-accent: var(--viz-accent);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-3: var(--viz-3);
+  --color-viz-4: var(--viz-4);
+  --color-viz-5: var(--viz-5);
+  --color-viz-empty: var(--viz-empty);
+  --color-viz-good: var(--viz-good);
+  --color-viz-bad: var(--viz-bad);
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -49,6 +58,17 @@
 }
 
 :root {
+  /* Data viz (validated with the dataviz skill): one accent hue for bars,
+     a 5-step sequential blue for the heatmap (low → high), status good/bad. */
+  --viz-accent: #2a78d6;
+  --viz-1: #86b6ef;
+  --viz-2: #5598e7;
+  --viz-3: #2a78d6;
+  --viz-4: #1c5cab;
+  --viz-5: #104281;
+  --viz-empty: oklch(0.96 0 0);
+  --viz-good: #0ca30c;
+  --viz-bad: #d03b3b;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +104,16 @@
 }
 
 .dark {
+  /* Dark: low spend sits near the surface (darker), high spend is brightest. */
+  --viz-accent: #3987e5;
+  --viz-1: #184f95;
+  --viz-2: #256abf;
+  --viz-3: #3987e5;
+  --viz-4: #6da7ec;
+  --viz-5: #9ec5f4;
+  --viz-empty: oklch(0.24 0 0);
+  --viz-good: #0ca30c;
+  --viz-bad: #d03b3b;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

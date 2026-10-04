@@ -344,6 +344,22 @@ export async function listTransactions(userId: string, filters: TransactionFilte
   return { items, hasMore, limit, summary, dayTotals };
 }
 
+/** Largest expenses in a date range. */
+export async function listTopExpenses(userId: string, from: string, to: string, limit = 5) {
+  return listQuery()
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        isNull(transactions.deletedAt),
+        eq(transactions.type, "expense"),
+        gte(transactions.txnDate, from),
+        lte(transactions.txnDate, to),
+      ),
+    )
+    .orderBy(desc(transactions.amountPaise), desc(transactions.txnDate))
+    .limit(limit);
+}
+
 /** Latest transactions for the home screen. */
 export async function listRecentTransactions(userId: string, limit = 10) {
   return listQuery()
