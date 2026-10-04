@@ -5,6 +5,9 @@ import {
   daysInRange,
   endOfMonth,
   formatDayLabel,
+  formatMonthLabel,
+  formatShortDay,
+  monthGrid,
   presetRange,
   startOfWeek,
   toIstDate,
@@ -68,5 +71,28 @@ describe("formatDayLabel", () => {
   });
   it("formats older days", () => {
     expect(formatDayLabel("2026-09-28", "2026-09-30")).toMatch(/Mon.*28.*Sep/);
+  });
+});
+
+describe("monthGrid", () => {
+  it("lays out October 2026 starting on Thursday (Monday-first weeks)", () => {
+    const weeks = monthGrid("2026-10-15");
+    expect(weeks[0]).toEqual([null, null, null, "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"]);
+    expect(weeks.at(-1)).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", null]);
+    expect(weeks.flat().filter(Boolean)).toHaveLength(31);
+  });
+
+  it("handles a month starting on Monday with no leading blanks", () => {
+    expect(monthGrid("2026-06-10")[0][0]).toBe("2026-06-01");
+  });
+
+  it("formats month labels", () => {
+    expect(formatMonthLabel("2026-10-15")).toBe("October 2026");
+  });
+});
+
+describe("formatShortDay", () => {
+  it("shows day and month", () => {
+    expect(formatShortDay("2026-09-23")).toMatch(/^23 Sep/);
   });
 });

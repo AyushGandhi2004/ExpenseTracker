@@ -39,6 +39,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { cn } from "cn";
 import { isIconName, type IconName } from "@/lib/icon-names";
 
 const ICONS: Record<IconName, LucideIcon> = {
@@ -99,7 +100,7 @@ export function AppIcon({
 export function IconBadge({
   icon,
   color,
-  className = "",
+  className,
 }: {
   icon: string | null | undefined;
   color?: string | null;
@@ -107,7 +108,7 @@ export function IconBadge({
 }) {
   return (
     <span
-      className={`flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground ${className}`}
+      className={cn("flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground", className)}
       style={color ? { backgroundColor: `${color}22`, color } : undefined}
     >
       <AppIcon name={icon} className="size-5" />

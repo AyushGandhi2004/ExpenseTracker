@@ -94,3 +94,33 @@ export function formatDayLabel(d: IsoDate, today: IsoDate = todayIst()): string 
   if (d === addDays(today, -1)) return "Yesterday";
   return dayLabelFormatter.format(parse(d));
 }
+
+/**
+ * Calendar weeks (Monday first) for the month containing `d`.
+ * Days outside the month are null so the grid lines up.
+ */
+export function monthGrid(d: IsoDate): (IsoDate | null)[][] {
+  const first = startOfMonth(d);
+  const last = endOfMonth(d);
+  const leading = daysInRange(startOfWeek(first), first) - 1;
+  const cells: (IsoDate | null)[] = Array.from({ length: leading }, () => null);
+  for (let day = first; day <= last; day = addDays(day, 1)) cells.push(day);
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (IsoDate | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
+const monthLabelFormatter = new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", month: "long", year: "numeric" });
+
+/** "October 2026" */
+export function formatMonthLabel(d: IsoDate): string {
+  return monthLabelFormatter.format(parse(startOfMonth(d)));
+}
+
+const shortDayFormatter = new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", day: "numeric", month: "short" });
+
+/** Compact label for tight spaces: "23 Sept". */
+export function formatShortDay(d: IsoDate): string {
+  return shortDayFormatter.format(parse(d));
+}
