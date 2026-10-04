@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Baby,
   Banknote,
   BookOpen,
@@ -22,6 +23,7 @@ import {
   Percent,
   Phone,
   PiggyBank,
+  Scale,
   Pill,
   Plane,
   Receipt,
@@ -83,6 +85,12 @@ const ICONS: Record<IconName, LucideIcon> = {
   "circle-ellipsis": CircleEllipsis,
 };
 
+/** Icons used by the app itself (not offered in the category icon picker). */
+const SYSTEM_ICONS: Record<string, LucideIcon> = {
+  transfer: ArrowLeftRight,
+  adjustment: Scale,
+};
+
 export function AppIcon({
   name,
   className,
@@ -92,7 +100,7 @@ export function AppIcon({
   className?: string;
   fallback?: IconName;
 }) {
-  const Icon = ICONS[isIconName(name) ? name : fallback];
+  const Icon: LucideIcon = isIconName(name) ? ICONS[name] : ((name ? SYSTEM_ICONS[name] : undefined) ?? ICONS[fallback]);
   return <Icon className={className} aria-hidden />;
 }
 

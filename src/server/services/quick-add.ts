@@ -3,14 +3,19 @@ import { and, asc, desc, eq, isNull, max, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { accounts, categories, paymentMethods, transactions } from "@/server/db/schema";
 
+type CategoryOption = { id: string; name: string; icon: string | null; color: string | null };
+
 export type QuickAddOptions = {
-  categories: { id: string; name: string; icon: string | null; color: string | null }[];
+  categories: CategoryOption[];
   paymentMethods: { id: string; name: string; kind: string; accountName: string }[];
   defaultPaymentMethodId: string | null;
+  /** For add money / transfer forms. */
+  accounts: { id: string; name: string; type: string }[];
+  incomeCategories: CategoryOption[];
 };
 
 /**
- * Everything the quick-add sheet needs, in one round of parallel queries:
+ * Everything the quick-add and money sheets need, in one round of parallel queries:
  * active expense categories (most recently used first), active payment methods,
  * and the method used for the latest expense as the default.
  */
@@ -22,7 +27,7 @@ export async function getQuickAddOptions(userId: string): Promise<QuickAddOption
     .groupBy(transactions.categoryId)
     .as("last_used");
 
-  const [categoryRows, methodRows, [latest]] = await Promise.all([
+  const [categoryRows, methodRows, [latest], accountRows, incomeRows] = await Promise.all([
     db
       .select({ id: categories.id, name: categories.name, icon: categories.icon, color: categories.color })
       .from(categories)
@@ -46,6 +51,16 @@ export async function getQuickAddOptions(userId: string): Promise<QuickAddOption
       .where(and(eq(transactions.userId, userId), eq(transactions.type, "expense"), isNull(transactions.deletedAt)))
       .orderBy(desc(transactions.createdAt))
       .limit(1),
+    db
+      .select({ id: accounts.id, name: accounts.name, type: accounts.type })
+      .from(accounts)
+      .where(and(eq(accounts.userId, userId), eq(accounts.isArchived, false)))
+      .orderBy(asc(accounts.sortOrder), asc(accounts.createdAt)),
+    db
+      .select({ id: categories.id, name: categories.name, icon: categories.icon, color: categories.color })
+      .from(categories)
+      .where(and(eq(categories.userId, userId), eq(categories.kind, "income"), eq(categories.isArchived, false)))
+      .orderBy(asc(categories.sortOrder), asc(categories.createdAt)),
   ]);
 
   const lastMethod = latest?.paymentMethodId;
@@ -53,5 +68,11 @@ export async function getQuickAddOptions(userId: string): Promise<QuickAddOption
     ? lastMethod!
     : (methodRows[0]?.id ?? null);
 
-  return { categories: categoryRows, paymentMethods: methodRows, defaultPaymentMethodId };
+  return {
+    categories: categoryRows,
+    paymentMethods: methodRows,
+    defaultPaymentMethodId,
+    accounts: accountRows,
+    incomeCategories: incomeRows,
+  };
 }

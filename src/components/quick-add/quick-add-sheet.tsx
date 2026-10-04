@@ -1,29 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, NotebookPen } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronRight, NotebookPen, Trash2 } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AppIcon, IconBadge } from "@/components/app-icon";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { applyAmountKey, formatAmountInput, type AmountKey } from "@/lib/amount-input";
 import { todayIst } from "@/lib/dates";
-import { formatINR, parseRupeesToPaise } from "@/lib/money";
+import type { ActionResult } from "@/lib/action-result";
+import { formatINR, paiseToRupeesString, parseRupeesToPaise } from "@/lib/money";
 import { newPendingExpense, type PendingExpense } from "@/lib/offline-queue";
 import { MAX_AMOUNT_PAISE } from "@/lib/validators/transactions";
+import type { ExpenseUpdate } from "@/lib/validators/transactions";
 import type { QuickAddOptions } from "@/server/services/quick-add";
 import { AmountKeypad } from "./amount-keypad";
 import { CalendarView } from "./calendar-view";
 import { DateChooser } from "./date-chooser";
 import { PaymentMethodList, paymentMethodIcon } from "./payment-method-list";
 
+/** An existing expense opened for editing. Names travel with it in case they were archived since. */
+export type EditableExpense = {
+  id: string;
+  amountPaise: number;
+  txnDate: string;
+  description: string | null;
+  category: { id: string; name: string; icon: string | null; color: string | null };
+  paymentMethod: { id: string; name: string; kind: string; accountName: string };
+};
+
 export function QuickAddSheet({
   open,
   onOpenChange,
-  options,
+  options: baseOptions,
   initialMethodId,
   onSave,
+  editing,
+  onUpdate,
+  onDelete,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -31,18 +46,39 @@ export function QuickAddSheet({
   /** The provider remounts this sheet (new `key`) on every open, so state starts fresh. */
   initialMethodId: string | null;
   onSave: (item: PendingExpense) => void;
+  editing?: EditableExpense | null;
+  onUpdate?: (id: string, fields: ExpenseUpdate) => Promise<ActionResult>;
+  onDelete?: (id: string) => void;
 }) {
+  // When editing, keep the expense's own category/method selectable even if archived since.
+  const [options] = useState<QuickAddOptions>(() => {
+    if (!editing) return baseOptions;
+    const { category, paymentMethod } = editing;
+    return {
+      ...baseOptions,
+      categories: baseOptions.categories.some((c) => c.id === category.id)
+        ? baseOptions.categories
+        : [...baseOptions.categories, category],
+      paymentMethods: baseOptions.paymentMethods.some((m) => m.id === paymentMethod.id)
+        ? baseOptions.paymentMethods
+        : [...baseOptions.paymentMethods, paymentMethod],
+    };
+  });
   const [view, setView] = useState<"main" | "method" | "date">("main");
-  const [amount, setAmount] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [amount, setAmount] = useState(() => (editing ? paiseToRupeesString(editing.amountPaise) : ""));
+  const [categoryId, setCategoryId] = useState<string | null>(editing?.category.id ?? null);
   const [methodId, setMethodId] = useState(() =>
-    initialMethodId && options.paymentMethods.some((m) => m.id === initialMethodId)
-      ? initialMethodId
-      : options.defaultPaymentMethodId,
+    editing
+      ? editing.paymentMethod.id
+      : initialMethodId && options.paymentMethods.some((m) => m.id === initialMethodId)
+        ? initialMethodId
+        : options.defaultPaymentMethodId,
   );
   const [today] = useState(todayIst);
-  const [txnDate, setTxnDate] = useState(today);
-  const [note, setNote] = useState("");
+  const [txnDate, setTxnDate] = useState(editing?.txnDate ?? today);
+  const [note, setNote] = useState(editing?.description ?? "");
+  const [saving, startSaving] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   // Hardware keyboard support (desktop, or a phone with a keyboard attached).
   useEffect(() => {
@@ -73,6 +109,27 @@ export function QuickAddSheet({
     if (missing || !category || !method) return;
     if (amountPaise > MAX_AMOUNT_PAISE) {
       toast.error("That amount is too large.");
+      return;
+    }
+    if (editing && onUpdate) {
+      // Edits go straight to the server (they need the existing row), so wait for the result.
+      setError(null);
+      startSaving(async () => {
+        try {
+          const result = await onUpdate(editing.id, {
+            amountPaise,
+            categoryId: category.id,
+            paymentMethodId: method.id,
+            txnDate,
+            description: note.trim() || null,
+          });
+          if (!result.ok) return setError(result.error);
+          toast.success("Expense updated");
+          onOpenChange(false);
+        } catch {
+          setError("Couldn't reach the server. Check your connection and try again.");
+        }
+      });
       return;
     }
     onSave(
@@ -106,7 +163,25 @@ export function QuickAddSheet({
         className="mx-auto flex max-h-[92dvh] max-w-lg flex-col gap-0 rounded-t-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))]"
       >
         <div className="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" aria-hidden />
-        <SheetTitle className="sr-only">Add expense</SheetTitle>
+        {editing ? (
+          view === "main" && (
+            <div className="flex items-center justify-between px-4">
+              <SheetTitle className="text-base font-semibold">Edit expense</SheetTitle>
+              {onDelete && (
+                <button
+                  type="button"
+                  aria-label="Delete expense"
+                  onClick={() => onDelete(editing.id)}
+                  className="flex size-10 items-center justify-center rounded-full text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="size-5" />
+                </button>
+              )}
+            </div>
+          )
+        ) : (
+          <SheetTitle className="sr-only">Add expense</SheetTitle>
+        )}
 
         {noMethods ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -219,8 +294,13 @@ export function QuickAddSheet({
             {/* Pinned bottom: keypad and save */}
             <div className="flex shrink-0 flex-col gap-2 border-t px-4 pt-3">
               <AmountKeypad onKey={(key) => setAmount((value) => applyAmountKey(value, key))} />
-              <Button size="lg" className="h-12 w-full text-base" disabled={!!missing} onClick={save}>
-                {missing ?? `Save ${formatINR(amountPaise)}`}
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+              <Button size="lg" className="h-12 w-full text-base" disabled={!!missing || saving} onClick={save}>
+                {missing ?? (saving ? "Saving…" : editing ? "Save changes" : `Save ${formatINR(amountPaise)}`)}
               </Button>
             </div>
           </>

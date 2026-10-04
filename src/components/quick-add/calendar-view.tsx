@@ -16,7 +16,8 @@ export function CalendarView({
   value: string;
   today: string;
   onSelect: (date: string) => void;
-  onBack: () => void;
+  /** Shows a "Pick a date" header with a back button (sheet view); omit when embedded inline. */
+  onBack?: () => void;
 }) {
   const [month, setMonth] = useState(() => startOfMonth(value));
   const atCurrentMonth = month >= startOfMonth(today);
@@ -25,12 +26,14 @@ export function CalendarView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col px-2">
-      <div className="flex items-center gap-2 pb-2">
-        <button type="button" onClick={onBack} aria-label="Back" className={navButton}>
-          <ChevronLeft className="size-5" />
-        </button>
-        <h2 className="text-base font-semibold">Pick a date</h2>
-      </div>
+      {onBack && (
+        <div className="flex items-center gap-2 pb-2">
+          <button type="button" onClick={onBack} aria-label="Back" className={navButton}>
+            <ChevronLeft className="size-5" />
+          </button>
+          <h2 className="text-base font-semibold">Pick a date</h2>
+        </div>
+      )}
 
       <div className="flex items-center justify-between px-2 py-2">
         <button

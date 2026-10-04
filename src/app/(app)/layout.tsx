@@ -1,4 +1,5 @@
 import { BottomNav } from "@/components/bottom-nav";
+import { MoneySheetsProvider } from "@/components/money/money-sheets";
 import { QuickAddFab } from "@/components/quick-add/quick-add-fab";
 import { QuickAddProvider } from "@/components/quick-add/quick-add-provider";
 import { requireUser } from "@/server/auth";
@@ -14,11 +15,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <QuickAddProvider options={quickAddOptions}>
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-[calc(9rem+env(safe-area-inset-bottom))]">
-        {children}
-      </div>
-      <QuickAddFab />
-      <BottomNav />
+      <MoneySheetsProvider options={quickAddOptions}>
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-[calc(9rem+env(safe-area-inset-bottom))]">
+          {children}
+        </div>
+        <QuickAddFab />
+        <BottomNav />
+      </MoneySheetsProvider>
     </QuickAddProvider>
   );
 }

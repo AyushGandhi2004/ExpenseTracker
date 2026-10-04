@@ -12,7 +12,8 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
-import { addExpense } from "@/app/(app)/actions";
+import { addExpense, updateExpense } from "@/app/(app)/actions";
+import { deleteWithUndo } from "@/components/transactions/delete-with-undo";
 import {
   createExpenseQueue,
   QUEUE_STORAGE_KEY,
@@ -20,8 +21,9 @@ import {
   type PendingExpense,
   type SyncOutcome,
 } from "@/lib/offline-queue";
+import { formatINR } from "@/lib/money";
 import type { QuickAddOptions } from "@/server/services/quick-add";
-import { QuickAddSheet } from "./quick-add-sheet";
+import { QuickAddSheet, type EditableExpense } from "./quick-add-sheet";
 
 const expenseQueue = createExpenseQueue(() => {
   try {
@@ -33,6 +35,7 @@ const expenseQueue = createExpenseQueue(() => {
 
 type QuickAddContextValue = {
   openQuickAdd: () => void;
+  openEditExpense: (expense: EditableExpense) => void;
   pending: readonly PendingExpense[];
   syncNow: () => Promise<SyncOutcome | null>;
   enqueue: (item: PendingExpense) => void;
@@ -52,6 +55,7 @@ export function QuickAddProvider({ options, children }: { options: QuickAddOptio
   const [open, setOpen] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
   const [lastMethodId, setLastMethodId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditableExpense | null>(null);
   const pending = useSyncExternalStore(
     expenseQueue.subscribe,
     expenseQueue.getSnapshot,
@@ -110,6 +114,12 @@ export function QuickAddProvider({ options, children }: { options: QuickAddOptio
   const value = useMemo<QuickAddContextValue>(
     () => ({
       openQuickAdd: () => {
+        setEditing(null);
+        setSheetKey((k) => k + 1);
+        setOpen(true);
+      },
+      openEditExpense: (expense) => {
+        setEditing(expense);
         setSheetKey((k) => k + 1);
         setOpen(true);
       },
@@ -137,6 +147,12 @@ export function QuickAddProvider({ options, children }: { options: QuickAddOptio
         onSave={(item) => {
           setLastMethodId(item.payload.paymentMethodId);
           enqueue(item);
+        }}
+        editing={editing}
+        onUpdate={updateExpense}
+        onDelete={(id) => {
+          setOpen(false);
+          void deleteWithUndo(id, editing ? formatINR(editing.amountPaise) : "expense");
         }}
       />
     </QuickAddContext.Provider>
