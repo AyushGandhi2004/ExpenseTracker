@@ -6,6 +6,8 @@ Personal, mobile-first expense tracker. Next.js 16 (React + TypeScript) · Supab
 
 **Phase 2A:** recurring payments (insurance yearly, Wi‑Fi every 3 months…) recorded automatically on their due dates.
 
+**Phase 2B.1:** investments — mutual funds and NSE/BSE stocks: buy/sell, holdings with current value and profit/loss, automatic NAVs/prices, and converting old "Investment" expenses.
+
 ## Setup
 
 1. Node 22 via nvm: `nvm use 22`
@@ -43,8 +45,18 @@ Sign-in uses Supabase email OTP. With a custom SMTP sender (e.g. Gmail + app pas
 Fixed costs on a cycle of N days / months / years, paid from a chosen payment method (its account is debited). Each due payment is recorded as a normal expense (`source = 'scheduled'`, linked by `recurring_payment_id`), so balances, analytics and exports include it.
 
 - Dates are computed from the first payment date (`src/lib/recurrence.ts`), so month-end schedules don't drift (31 Jan → 28 Feb → 31 Mar).
-- Due payments are recorded when the app opens and by a daily Vercel Cron (`/api/cron/recurring`, 00:00 IST). Both are idempotent: a unique index on `(recurring_payment_id, txn_date)` makes a duplicate impossible, and a payment you delete is not re-created.
+- Due payments are recorded when the app opens and by a daily Vercel Cron (`/api/cron/daily`, 00:00 IST — it also refreshes investment prices). Both are idempotent: a unique index on `(recurring_payment_id, txn_date)` makes a duplicate impossible, and a payment you delete is not re-created.
 - Editing applies from the next payment; pausing skips payments until resumed; deleting a schedule keeps the payments already recorded.
+
+## Investments
+
+Mutual funds and stocks live in `instruments`; each buy/sell is an `investment_transactions` row. Units and prices are exact decimals (scaled bigint in `src/lib/portfolio.ts`, `numeric` in Postgres) — never floats.
+
+- **Investing is not spending.** A buy paid from a payment method creates a ledger row of type `invest` (debits that account); a sale credited to an account creates `redeem`. Both are written in the same DB transaction as the trade, and deleting/restoring one moves the other. Spending analytics count only `expense`, so investing shows separately as "Invested". "Don't change my bank balance" records the trade alone.
+- **Profit** uses the average-cost method: realised on sells, unrealised = units × latest price − cost of units held. Sales can't exceed the units held on that date.
+- **Prices** (`src/server/services/prices.ts`, parsers in `src/lib/price-feeds.ts`): fund NAVs from AMFI's daily `NAVAll.txt` (search and NAV history via mfapi.in); share prices from Yahoo Finance (unofficial, may be delayed). Trades pre-fill the NAV/close for their date (a holiday uses the next published NAV). Prices refresh on the Refresh button (at most every 15 min per holding) and in the daily cron. If a source is down, the last price stays; you can always type a price.
+- **Mutual fund buys** are entered by amount; units = (amount − 0.005% stamp duty) ÷ NAV, rounded to 3 decimals like AMCs — type the exact units from your statement if they differ.
+- **Converting** an expense filed under an investment-like category (Invest…, Mutual…, SIP, Stock…, Share…) turns its ledger row into `invest` (same account, amount, date — balance unchanged, spending drops) and records the buy.
 
 ## API (`/api/v1`)
 
@@ -64,6 +76,12 @@ Authenticate with the web session cookie, or `Authorization: Bearer <Supabase ac
 | `GET /export` | CSV (same filters as `/transactions`) |
 | `GET /recurring` · `POST /recurring` | List / create recurring payments (`recordPast` to back-fill) |
 | `PATCH /recurring/:id` · `DELETE /recurring/:id` | Edit (or `{ "paused": bool }`) / delete |
+| `GET /instruments/search` | `kind=mutual_fund\|stock&q=…` |
+| `GET /instruments/price` | Price for a trade date: `kind, schemeCode \| symbol+exchange, date` |
+| `GET /investments` · `POST /investments` | Holdings + totals / record a buy or sell (idempotent on `id`; units and prices are decimal strings) |
+| `GET /investments/:instrumentId` | One holding with its trades |
+| `PATCH /investments/trades/:id` · `DELETE …` · `POST …/restore` | Edit / delete / undo a trade (its cash row follows) |
+| `POST /prices/refresh` | Fetch latest NAVs/prices for your holdings |
 
 Errors are JSON: `400 { error, issues? }` for bad input, `401` when not signed in.
 

@@ -7,6 +7,7 @@ import {
   foreignKey,
   index,
   integer,
+  numeric,
   pgEnum,
   pgPolicy,
   pgTable,
@@ -37,7 +38,19 @@ export const paymentMethodKind = pgEnum("payment_method_kind", [
   "wallet",
 ]);
 export const categoryKind = pgEnum("category_kind", ["expense", "income"]);
-export const transactionType = pgEnum("transaction_type", ["expense", "income", "transfer", "adjustment"]);
+// invest = cash moved into a holding (not spending); redeem = cash back from a sale.
+export const transactionType = pgEnum("transaction_type", [
+  "expense",
+  "income",
+  "transfer",
+  "adjustment",
+  "invest",
+  "redeem",
+]);
+export const instrumentKind = pgEnum("instrument_kind", ["mutual_fund", "stock"]);
+export const priceSource = pgEnum("price_source", ["amfi", "yahoo", "manual"]);
+export const tradeType = pgEnum("trade_type", ["buy", "sell"]);
+export const tradeSource = pgEnum("trade_source", ["manual", "sip", "import", "converted"]);
 export const transactionSource = pgEnum("transaction_source", ["manual", "import", "ai", "scheduled"]);
 export const intervalUnit = pgEnum("interval_unit", ["day", "month", "year"]);
 export const recurrenceEnd = pgEnum("recurrence_end", ["never", "on_date", "after_count"]);
@@ -229,3 +242,77 @@ export type Category = typeof categories.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 export type RecurringPayment = typeof recurringPayments.$inferSelect;
+
+/** A mutual fund scheme or a listed stock the user holds or has held. */
+export const instruments = pgTable(
+  "instruments",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: ownerId(),
+    kind: instrumentKind().notNull(),
+    name: text().notNull(),
+    // Mutual funds: AMFI scheme code. Stocks: symbol without suffix + exchange.
+    schemeCode: text(),
+    symbol: text(),
+    exchange: text(),
+    isin: text(),
+    // ₹ per unit, exact decimal (string in JS).
+    lastPrice: numeric({ precision: 18, scale: 4 }),
+    priceDate: date({ mode: "string" }),
+    priceSource: priceSource(),
+    priceCheckedAt: timestamp({ withTimezone: true }),
+    isArchived: boolean().notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("instruments_user_scheme_uq").on(t.userId, t.schemeCode),
+    uniqueIndex("instruments_user_symbol_uq").on(t.userId, t.symbol, t.exchange),
+    check(
+      "instruments_identity_ck",
+      sql`(${t.kind} = 'mutual_fund' and ${t.schemeCode} is not null)
+          or (${t.kind} = 'stock' and ${t.symbol} is not null and ${t.exchange} in ('NSE', 'BSE'))`,
+    ),
+    ownerPolicy("instruments"),
+  ],
+).enableRLS();
+
+/**
+ * A buy or sell of an instrument. The cash side, when it touched a bank account, is a
+ * normal ledger row (type invest/redeem) linked by cash_transaction_id.
+ */
+export const investmentTransactions = pgTable(
+  "investment_transactions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: ownerId(),
+    instrumentId: uuid()
+      .notNull()
+      .references(() => instruments.id, { onDelete: "restrict" }),
+    type: tradeType().notNull(),
+    tradeDate: date({ mode: "string" }).notNull(),
+    // Units (exact decimal string) and ₹ per unit.
+    quantity: numeric({ precision: 24, scale: 6 }).notNull(),
+    price: numeric({ precision: 18, scale: 4 }).notNull(),
+    // Cash that moved: buy = paid incl. charges; sell = received after charges.
+    amountPaise: money().notNull(),
+    chargesPaise: money().notNull().default(0),
+    cashTransactionId: uuid().references(() => transactions.id, { onDelete: "set null" }),
+    source: tradeSource().notNull().default("manual"),
+    recurringPaymentId: uuid().references(() => recurringPayments.id, { onDelete: "set null" }),
+    // Units computed from an estimated NAV (finalised once the day's NAV is published).
+    unitsEstimated: boolean().notNull().default(false),
+    note: text(),
+    ...timestamps,
+    deletedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index("investment_tx_user_instrument_idx").on(t.userId, t.instrumentId, t.tradeDate),
+    uniqueIndex("investment_tx_cash_uq").on(t.cashTransactionId),
+    uniqueIndex("investment_tx_recurring_date_uq").on(t.recurringPaymentId, t.tradeDate),
+    check("investment_tx_positive_ck", sql`${t.quantity} > 0 and ${t.price} > 0 and ${t.amountPaise} >= 0 and ${t.chargesPaise} >= 0`),
+    ownerPolicy("investment_transactions"),
+  ],
+).enableRLS();
+
+export type Instrument = typeof instruments.$inferSelect;
+export type InvestmentTransaction = typeof investmentTransactions.$inferSelect;

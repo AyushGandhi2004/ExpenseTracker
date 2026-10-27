@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Landmark, List, Settings, type LucideIcon } from "lucide-react";
+import { House, Landmark, List, Settings, TrendingUp, type LucideIcon } from "lucide-react";
 
 const ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Home", icon: House },
   { href: "/transactions", label: "Transactions", icon: List },
+  { href: "/invest", label: "Invest", icon: TrendingUp },
   { href: "/accounts", label: "Accounts", icon: Landmark },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -22,7 +23,7 @@ export function BottomNav() {
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-backdrop-filter:bg-background/80"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-4">
+      <ul className="mx-auto grid max-w-lg grid-cols-5">
         {ITEMS.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (

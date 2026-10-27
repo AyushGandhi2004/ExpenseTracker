@@ -7,9 +7,11 @@
  *   adjustment on the account (signed amount) → +amount
  *   transfer   out of `account_id`            → −amount
  *   transfer   into `to_account_id`           → +amount
+ *   invest     from the paying account        → −amount (cash into a holding; not spending)
+ *   redeem     into the account               → +amount (sale proceeds)
  */
 
-export type TransactionType = "expense" | "income" | "transfer" | "adjustment";
+export type TransactionType = "expense" | "income" | "transfer" | "adjustment" | "invest" | "redeem";
 
 /** One aggregated row: the sum of a transaction type on one side of an account. */
 export type LedgerSum = {
@@ -24,9 +26,11 @@ export function ledgerEffect(type: TransactionType, isSource: boolean, amountPai
   switch (type) {
     case "expense":
     case "transfer":
+    case "invest":
       return -amountPaise;
     case "income":
     case "adjustment":
+    case "redeem":
       return amountPaise;
   }
 }

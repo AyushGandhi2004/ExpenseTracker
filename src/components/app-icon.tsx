@@ -1,4 +1,5 @@
 import {
+  HandCoins,
   ArrowLeftRight,
   Baby,
   Banknote,
@@ -89,6 +90,8 @@ const ICONS: Record<IconName, LucideIcon> = {
 const SYSTEM_ICONS: Record<string, LucideIcon> = {
   transfer: ArrowLeftRight,
   adjustment: Scale,
+  invest: TrendingUp,
+  redeem: HandCoins,
 };
 
 export function AppIcon({

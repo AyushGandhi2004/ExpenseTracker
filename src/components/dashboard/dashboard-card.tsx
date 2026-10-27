@@ -13,11 +13,22 @@ export function DashboardCard({ title, action, children }: { title: string; acti
   );
 }
 
-export function StatTile({ label, value, href }: { label: string; value: string; href?: string }) {
+export function StatTile({
+  label,
+  value,
+  href,
+  detail,
+}: {
+  label: string;
+  value: string;
+  href?: string;
+  detail?: React.ReactNode;
+}) {
   const body = (
     <>
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="truncate text-base font-semibold tabular-nums">{value}</span>
+      {detail && <span className="truncate text-xs">{detail}</span>}
     </>
   );
   const className = "flex min-w-0 flex-col gap-0.5 rounded-xl border px-3 py-2.5";

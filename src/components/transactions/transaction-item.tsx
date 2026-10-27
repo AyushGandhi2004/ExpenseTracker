@@ -47,6 +47,24 @@ export function describeTransaction(tx: TransactionListItem) {
         amount: Math.abs(tx.amountPaise),
         sign: tx.amountPaise > 0 ? ("+" as const) : ("-" as const),
       };
+    case "invest":
+      return {
+        icon: "invest",
+        color: null,
+        title: tx.instrumentName ?? tx.description ?? "Investment",
+        detail: ["Invested", tx.paymentMethodName ?? tx.accountName],
+        amount: tx.amountPaise,
+        sign: "-" as const,
+      };
+    case "redeem":
+      return {
+        icon: "redeem",
+        color: null,
+        title: tx.instrumentName ?? tx.description ?? "Redemption",
+        detail: ["Redeemed", `into ${tx.accountName}`],
+        amount: tx.amountPaise,
+        sign: "+" as const,
+      };
   }
 }
 

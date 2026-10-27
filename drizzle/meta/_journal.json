@@ -15,6 +15,13 @@
       "when": 1793105518976,
       "tag": "0001_recurring_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793107429496,
+      "tag": "0002_investments",
+      "breakpoints": true
     }
   ]
 }

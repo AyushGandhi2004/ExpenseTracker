@@ -5,6 +5,7 @@ import { AppIcon, IconBadge } from "@/components/app-icon";
 import { BreakdownList } from "@/components/dashboard/breakdown-list";
 import { DailyChart } from "@/components/dashboard/daily-chart";
 import { DashboardCard, StatTile } from "@/components/dashboard/dashboard-card";
+import { Pnl } from "@/components/invest/pnl";
 import { PeriodNav } from "@/components/dashboard/period-nav";
 import { SpendCalendar } from "@/components/dashboard/spend-calendar";
 import { PageHeader } from "@/components/page-header";
@@ -17,6 +18,7 @@ import { formatINR } from "@/lib/money";
 import { paymentMethodIcon } from "@/lib/validators/settings";
 import { requireUser } from "@/server/auth";
 import { getDashboard } from "@/server/services/analytics";
+import { listHoldings } from "@/server/services/investments";
 import { listUpcoming } from "@/server/services/recurring";
 import { listRecentTransactions } from "@/server/services/transactions";
 
@@ -31,11 +33,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const { period: kind, anchor } = params.parse(await searchParams);
   const period = dashboardPeriod(kind, anchor && anchor <= today ? anchor : today, today);
 
-  const [data, recent, recurring] = await Promise.all([
+  const [data, recent, recurring, holdings] = await Promise.all([
     getDashboard(user.id, period),
     listRecentTransactions(user.id, 5),
     listUpcoming(user.id, 7, today),
+    listHoldings(user.id),
   ]);
+  const portfolio = holdings.summary;
+  const hasPortfolio = holdings.open.length > 0 || data.invested > 0;
 
   const range = `from=${period.from}&to=${period.to}`;
   const periodName =
@@ -98,6 +103,23 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <StatTile label="Money in" value={formatINR(data.received)} href={`/transactions?type=income&${range}`} />
         <StatTile label="Balance" value={formatINR(data.totalBalance)} href="/accounts" />
       </div>
+
+      {hasPortfolio && (
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <StatTile
+            label="Investments"
+            value={formatINR(portfolio.valuePaise)}
+            href="/invest"
+            detail={<Pnl paise={portfolio.unrealisedPaise} pct={portfolio.unrealisedPct} showAmount={false} />}
+          />
+          <StatTile
+            label={`Invested ${periodName}`}
+            value={formatINR(data.invested)}
+            href={`/transactions?type=invest&${range}`}
+            detail={<span className="text-muted-foreground">Not counted as spending</span>}
+          />
+        </div>
+      )}
 
       {data.spent === 0 ? (
         <p className="mb-4 rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">

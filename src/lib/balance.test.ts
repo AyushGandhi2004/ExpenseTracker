@@ -8,11 +8,14 @@ describe("ledgerEffect", () => {
     expect(ledgerEffect("transfer", true, 500)).toBe(-500);
     expect(ledgerEffect("adjustment", true, 250)).toBe(250);
     expect(ledgerEffect("adjustment", true, -250)).toBe(-250);
+    expect(ledgerEffect("invest", true, 300)).toBe(-300);
+    expect(ledgerEffect("redeem", true, 300)).toBe(300);
   });
 
   it("only transfers affect the destination side", () => {
     expect(ledgerEffect("transfer", false, 500)).toBe(500);
     expect(ledgerEffect("expense", false, 500)).toBe(0);
+    expect(ledgerEffect("invest", false, 500)).toBe(0);
   });
 });
 

@@ -24,7 +24,8 @@ export function FormSheet({
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  submitLabel: string;
+  /** Omit for a step with nothing to submit (e.g. picking from a list). */
+  submitLabel?: string;
   pending: boolean;
   error: string | null;
   onSubmit: () => void;
@@ -51,9 +52,11 @@ export function FormSheet({
                 {error}
               </p>
             )}
-            <Button type="submit" size="lg" className="h-11 w-full text-base" disabled={pending}>
-              {pending ? "Saving…" : submitLabel}
-            </Button>
+            {submitLabel && (
+              <Button type="submit" size="lg" className="h-11 w-full text-base" disabled={pending}>
+                {pending ? "Saving…" : submitLabel}
+              </Button>
+            )}
             {secondaryActions && <div className="flex gap-2">{secondaryActions}</div>}
           </div>
         </form>

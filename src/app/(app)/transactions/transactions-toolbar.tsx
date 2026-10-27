@@ -22,6 +22,7 @@ const TYPES = [
   { value: "expense", label: "Expenses" },
   { value: "income", label: "Money in" },
   { value: "transfer", label: "Transfers" },
+  { value: "invest", label: "Invested" },
 ] as const;
 
 const PERIODS: { value: RangePreset; label: string }[] = [

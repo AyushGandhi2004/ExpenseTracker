@@ -32,6 +32,8 @@ export async function getDashboard(userId: string, period: DashboardPeriod) {
       .select({
         spent: sumPaise(sql`${transactions.type} = 'expense'`),
         received: sumPaise(sql`${transactions.type} = 'income'`),
+        invested: sumPaise(sql`${transactions.type} = 'invest'`),
+        redeemed: sumPaise(sql`${transactions.type} = 'redeem'`),
         expenseCount: sql<number>`count(*) filter (where ${transactions.type} = 'expense')::int`,
       })
       .from(transactions)
@@ -79,6 +81,9 @@ export async function getDashboard(userId: string, period: DashboardPeriod) {
   return {
     spent: totals.spent,
     received: totals.received,
+    // Investing moves money into holdings; it's shown separately, never as spending.
+    invested: totals.invested,
+    redeemed: totals.redeemed,
     expenseCount: totals.expenseCount,
     compareSpent: compare.spent,
     daily: new Map(daily.map((d) => [d.date, d.spent])),

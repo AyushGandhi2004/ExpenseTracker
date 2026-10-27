@@ -70,7 +70,7 @@ export const transactionFilters = z.object({
   category: z.uuid().optional().catch(undefined),
   method: z.uuid().optional().catch(undefined),
   account: z.uuid().optional().catch(undefined),
-  type: z.enum(["expense", "income", "transfer", "adjustment"]).optional().catch(undefined),
+  type: z.enum(["expense", "income", "transfer", "adjustment", "invest", "redeem"]).optional().catch(undefined),
   /** "1" = only payments recorded automatically by recurring schedules. */
   recurring: z.literal("1").optional().catch(undefined),
   from: isoDate.optional().catch(undefined),

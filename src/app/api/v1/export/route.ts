@@ -4,17 +4,21 @@ import { transactionFilters } from "@/lib/validators/transactions";
 import { apiRoute, queryOf } from "@/server/api";
 import { exportTransactions } from "@/server/services/transactions";
 
-const TYPE_LABEL = { expense: "Expense", income: "Money in", transfer: "Transfer", adjustment: "Adjustment" } as const;
+const TYPE_LABEL = {
+  expense: "Expense", income: "Money in", transfer: "Transfer", adjustment: "Adjustment",
+  invest: "Invested",
+  redeem: "Redeemed",
+} as const;
 
 /**
  * CSV of transactions matching the same filters as the Transactions screen.
- * Amount is signed rupees from your accounts' point of view: expenses negative, money in positive.
+ * Amount is signed rupees from your accounts' point of view: expenses and investments negative, money in and redemptions positive.
  */
 export const GET = apiRoute(async (user, request) => {
   // Export ignores paging: every matching row.
   const rows = await exportTransactions(user.id, transactionFilters.parse(queryOf(request)));
 
-  const signed = (t: (typeof rows)[number]) => (t.type === "expense" ? -t.amountPaise : t.amountPaise);
+  const signed = (t: (typeof rows)[number]) => (t.type === "expense" || t.type === "invest" ? -t.amountPaise : t.amountPaise);
   const csv = toCsv(
     ["Date", "Type", "Amount (INR)", "Category", "Payment method", "Account", "To account", "Note"],
     rows.map((t) => [

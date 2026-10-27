@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownUp, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
@@ -51,6 +52,7 @@ export function MoneySheetsProvider({ options, children }: { options: QuickAddOp
   const { openEditExpense } = useQuickAdd();
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const [key, setKey] = useState(0);
 
   const value = useMemo<MoneySheetsValue>(() => {
@@ -91,10 +93,15 @@ export function MoneySheetsProvider({ options, children }: { options: QuickAddOp
             return show({ kind: "transfer", editing: tx });
           case "adjustment":
             return show({ kind: "adjustment", tx });
+          case "invest":
+          case "redeem":
+            // Trades are edited on their holding's page.
+            if (tx.instrumentId) router.push(`/invest/${tx.instrumentId}`);
+            return;
         }
       },
     };
-  }, [openEditExpense]);
+  }, [openEditExpense, router]);
 
   const sheetProps = { open, onOpenChange: setOpen, options, close: () => setOpen(false) };
 

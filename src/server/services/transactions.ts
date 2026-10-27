@@ -12,13 +12,20 @@ import type {
   TransferUpdate,
 } from "@/lib/validators/transactions";
 import { db } from "@/server/db";
-import { accounts, categories, paymentMethods, transactions } from "@/server/db/schema";
+import {
+  accounts,
+  categories,
+  instruments,
+  investmentTransactions,
+  paymentMethods,
+  transactions,
+} from "@/server/db/schema";
 import { UserError } from "@/server/errors";
 import { getAccountBalance } from "./balances";
 
 // ── Validation helpers ───────────────────────────────────────────────────────
 
-function assertDateNotFuture(txnDate: string) {
+export function assertDateNotFuture(txnDate: string) {
   // Allow "tomorrow" in IST to absorb device clocks that are slightly ahead.
   if (txnDate > addDays(todayIst(), 1)) throw new UserError("The date can't be in the future.");
 }
@@ -43,7 +50,7 @@ export async function getPaymentMethodAccount(userId: string, id: string, keepId
   return row.accountId;
 }
 
-async function assertAccount(userId: string, id: string, keepIds: (string | null | undefined)[] = []) {
+export async function assertAccount(userId: string, id: string, keepIds: (string | null | undefined)[] = []) {
   const [row] = await db
     .select({ isArchived: accounts.isArchived })
     .from(accounts)
@@ -246,14 +253,24 @@ export async function reconcileAccount(
 
 // ── Delete / restore ─────────────────────────────────────────────────────────
 
-export async function softDeleteTransaction(userId: string, id: string): Promise<void> {
+/** Deleting an invest/redeem cash movement also deletes its trade (and restoring brings both back). */
+async function setDeleted(userId: string, id: string, deletedAt: Date | null) {
   await getOwnedTransaction(userId, id);
-  await db.update(transactions).set({ deletedAt: new Date() }).where(ownedWhere(userId, id));
+  await db.transaction(async (tx) => {
+    await tx.update(transactions).set({ deletedAt }).where(ownedWhere(userId, id));
+    await tx
+      .update(investmentTransactions)
+      .set({ deletedAt })
+      .where(and(eq(investmentTransactions.userId, userId), eq(investmentTransactions.cashTransactionId, id)));
+  });
+}
+
+export async function softDeleteTransaction(userId: string, id: string): Promise<void> {
+  await setDeleted(userId, id, new Date());
 }
 
 export async function restoreTransaction(userId: string, id: string): Promise<void> {
-  await getOwnedTransaction(userId, id);
-  await db.update(transactions).set({ deletedAt: null }).where(ownedWhere(userId, id));
+  await setDeleted(userId, id, null);
 }
 
 // ── Reading ──────────────────────────────────────────────────────────────────
@@ -296,6 +313,9 @@ const listColumns = {
   accountName: accounts.name,
   toAccountId: transactions.toAccountId,
   toAccountName: toAccounts.name,
+  /** Set on invest/redeem rows: the holding they belong to. */
+  instrumentId: investmentTransactions.instrumentId,
+  instrumentName: instruments.name,
 };
 
 function listQuery() {
@@ -305,7 +325,9 @@ function listQuery() {
     .innerJoin(accounts, eq(accounts.id, transactions.accountId))
     .leftJoin(toAccounts, eq(toAccounts.id, transactions.toAccountId))
     .leftJoin(categories, eq(categories.id, transactions.categoryId))
-    .leftJoin(paymentMethods, eq(paymentMethods.id, transactions.paymentMethodId));
+    .leftJoin(paymentMethods, eq(paymentMethods.id, transactions.paymentMethodId))
+    .leftJoin(investmentTransactions, eq(investmentTransactions.cashTransactionId, transactions.id))
+    .leftJoin(instruments, eq(instruments.id, investmentTransactions.instrumentId));
 }
 
 export const DEFAULT_PAGE_SIZE = 50;
