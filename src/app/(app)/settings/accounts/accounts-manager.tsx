@@ -22,6 +22,8 @@ export type AccountItem = {
   name: string;
   type: AccountType;
   openingBalancePaise: number;
+  /** Current balance (opening + transactions since the opening date). */
+  balancePaise: number;
   openingDate: string;
   isArchived: boolean;
 };
@@ -74,7 +76,7 @@ export function AccountsManager({ accounts }: { accounts: AccountItem[] }) {
   const toItem = (a: AccountItem) => ({
     id: a.id,
     title: a.name,
-    subtitle: `${TYPE_LABEL[a.type]} · opening ${formatINR(a.openingBalancePaise)}`,
+    subtitle: `${TYPE_LABEL[a.type]} · balance ${formatINR(a.balancePaise)}`,
     leading: <IconBadge icon={TYPE_ICON[a.type]} />,
   });
 

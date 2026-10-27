@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import {
-  expenseInput,
   expenseUpdate,
   incomeInput,
   incomeUpdate,
@@ -14,11 +13,6 @@ import { runAction } from "@/server/action-result";
 import * as txService from "@/server/services/transactions";
 
 const id = z.uuid();
-
-/** Quick add. Safe to retry with the same payload (idempotent on its client-generated id). */
-export async function addExpense(raw: unknown) {
-  return runAction((user) => txService.createExpense(user.id, expenseInput.parse(raw)));
-}
 
 export async function updateExpense(txId: string, raw: unknown) {
   return runAction((user) => txService.updateExpense(user.id, id.parse(txId), expenseUpdate.parse(raw)));

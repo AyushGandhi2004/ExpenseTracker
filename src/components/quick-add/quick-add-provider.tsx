@@ -11,8 +11,9 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExpense, updateExpense } from "@/app/(app)/actions";
+import { updateExpense } from "@/app/(app)/actions";
 import { deleteWithUndo } from "@/components/transactions/delete-with-undo";
 import {
   createExpenseQueue,
@@ -21,11 +22,15 @@ import {
   type PendingExpense,
   type SyncOutcome,
 } from "@/lib/offline-queue";
+import { createExpenseSender } from "@/lib/expense-sync";
 import { formatINR } from "@/lib/money";
 import type { QuickAddOptions } from "@/server/services/quick-add";
 import { QuickAddSheet, type EditableExpense } from "./quick-add-sheet";
 
 const RETRY_MS = 30_000;
+/** After this long in the background, numbers on screen may be stale; refetch on return. */
+const STALE_AFTER_MS = 30_000;
+const sendExpense = createExpenseSender();
 
 const expenseQueue = createExpenseQueue(() => {
   try {
@@ -54,6 +59,7 @@ export function useQuickAdd() {
 }
 
 export function QuickAddProvider({ options, children }: { options: QuickAddOptions; children: ReactNode }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
   const [lastMethodId, setLastMethodId] = useState<string | null>(null);
@@ -74,22 +80,37 @@ export function QuickAddProvider({ options, children }: { options: QuickAddOptio
       return null;
     }
     let outcome: SyncOutcome;
+    let synced = 0;
     do {
       rerun.current = false;
-      syncing.current = syncExpenseQueue(expenseQueue, addExpense);
+      syncing.current = syncExpenseQueue(expenseQueue, sendExpense);
       try {
         outcome = await syncing.current;
       } finally {
         syncing.current = null;
       }
+      synced += outcome.synced;
     } while (rerun.current && !outcome.offline);
+    // The REST endpoint doesn't revalidate the page, so pull fresh balances and lists.
+    if (synced > 0) router.refresh();
     return outcome;
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     void syncNow();
+    let hiddenAt: number | null = null;
     const onOnline = () => void syncNow();
-    const onVisible = () => document.visibilityState === "visible" && void syncNow();
+    const onVisible = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+        return;
+      }
+      // An installed app resumed from the background still shows the page as it was
+      // rendered then; refetch so balances and lists reflect everything since.
+      if (hiddenAt !== null && Date.now() - hiddenAt >= STALE_AFTER_MS) router.refresh();
+      hiddenAt = null;
+      void syncNow();
+    };
     const onStorage = (e: StorageEvent) => e.key === QUEUE_STORAGE_KEY && expenseQueue.invalidate();
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
@@ -99,7 +120,7 @@ export function QuickAddProvider({ options, children }: { options: QuickAddOptio
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("storage", onStorage);
     };
-  }, [syncNow]);
+  }, [syncNow, router]);
 
   // Retry periodically while entries wait (covers server outages, where no "online" event fires).
   const hasPending = pending.some((p) => p.status === "pending");
