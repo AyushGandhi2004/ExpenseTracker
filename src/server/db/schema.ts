@@ -39,6 +39,8 @@ export const paymentMethodKind = pgEnum("payment_method_kind", [
 export const categoryKind = pgEnum("category_kind", ["expense", "income"]);
 export const transactionType = pgEnum("transaction_type", ["expense", "income", "transfer", "adjustment"]);
 export const transactionSource = pgEnum("transaction_source", ["manual", "import", "ai", "scheduled"]);
+export const intervalUnit = pgEnum("interval_unit", ["day", "month", "year"]);
+export const recurrenceEnd = pgEnum("recurrence_end", ["never", "on_date", "after_count"]);
 
 // Number mode is safe up to 2^53 paise (~₹90 trillion).
 const money = () => bigint({ mode: "number" });
@@ -126,6 +128,53 @@ export const categories = pgTable(
   ],
 ).enableRLS();
 
+/**
+ * A fixed cost paid on a cycle (insurance yearly, Wi-Fi every 3 months…). Each due payment is
+ * materialised as a normal expense transaction (source 'scheduled') linked back here.
+ * Dates are computed from `start_date` + n × interval, so month ends never drift.
+ */
+export const recurringPayments = pgTable(
+  "recurring_payments",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: ownerId(),
+    name: text().notNull(),
+    amountPaise: money().notNull(),
+    categoryId: uuid()
+      .notNull()
+      .references(() => categories.id, { onDelete: "restrict" }),
+    paymentMethodId: uuid()
+      .notNull()
+      .references(() => paymentMethods.id, { onDelete: "restrict" }),
+    // First deduction (IST calendar day).
+    startDate: date({ mode: "string" }).notNull(),
+    intervalUnit: intervalUnit().notNull(),
+    intervalCount: integer().notNull(),
+    endType: recurrenceEnd().notNull().default("never"),
+    endDate: date({ mode: "string" }),
+    endCount: integer(),
+    // How many occurrences (from the start) are already recorded or deliberately skipped.
+    occurrencesCreated: integer().notNull().default(0),
+    // Next payment to record; null once the schedule has ended.
+    nextDueDate: date({ mode: "string" }),
+    isPaused: boolean().notNull().default(false),
+    note: text(),
+    ...timestamps,
+  },
+  (t) => [
+    index("recurring_payments_user_due_idx").on(t.userId, t.nextDueDate),
+    check("recurring_payments_amount_ck", sql`${t.amountPaise} > 0`),
+    check("recurring_payments_interval_ck", sql`${t.intervalCount} between 1 and 365`),
+    check(
+      "recurring_payments_end_ck",
+      sql`(${t.endType} = 'on_date') = (${t.endDate} is not null)
+          and (${t.endType} = 'after_count') = (${t.endCount} is not null)
+          and (${t.endCount} is null or ${t.endCount} >= 1)`,
+    ),
+    ownerPolicy("recurring_payments"),
+  ],
+).enableRLS();
+
 export const transactions = pgTable(
   "transactions",
   {
@@ -145,6 +194,7 @@ export const transactions = pgTable(
     paymentMethodId: uuid().references(() => paymentMethods.id, { onDelete: "restrict" }),
     description: text(),
     source: transactionSource().notNull().default("manual"),
+    recurringPaymentId: uuid().references(() => recurringPayments.id, { onDelete: "set null" }),
     ...timestamps,
     deletedAt: timestamp({ withTimezone: true }),
   },
@@ -153,6 +203,9 @@ export const transactions = pgTable(
     index("transactions_user_category_idx").on(t.userId, t.categoryId),
     index("transactions_user_account_idx").on(t.userId, t.accountId),
     index("transactions_user_to_account_idx").on(t.userId, t.toAccountId),
+    // One payment per due date per schedule — even soft-deleted rows keep their slot,
+    // so a payment the user deleted is never re-created.
+    uniqueIndex("transactions_recurring_date_uq").on(t.recurringPaymentId, t.txnDate),
     check(
       "transactions_amount_ck",
       sql`(${t.type} = 'adjustment' and ${t.amountPaise} <> 0) or ${t.amountPaise} > 0`,
@@ -175,3 +228,4 @@ export type PaymentMethod = typeof paymentMethods.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+export type RecurringPayment = typeof recurringPayments.$inferSelect;

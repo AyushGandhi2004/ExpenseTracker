@@ -190,3 +190,8 @@ const shortMonthFormatter = new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", 
 export function formatShortMonthLabel(d: IsoDate): string {
   return shortMonthFormatter.format(parse(startOfMonth(d)));
 }
+
+/** Like formatDayLabel, but adds the year when it isn't the current one ("15 Jan 2027"). */
+export function formatDueDate(d: IsoDate, today: IsoDate = todayIst()): string {
+  return d.slice(0, 4) === today.slice(0, 4) ? formatDayLabel(d, today) : `${formatShortDay(d)} ${d.slice(0, 4)}`;
+}

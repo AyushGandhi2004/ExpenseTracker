@@ -12,15 +12,18 @@ export function CalendarView({
   today,
   onSelect,
   onBack,
+  allowFuture = false,
 }: {
   value: string;
   today: string;
   onSelect: (date: string) => void;
+  /** Allow picking dates after today (scheduling); expenses keep the default. */
+  allowFuture?: boolean;
   /** Shows a "Pick a date" header with a back button (sheet view); omit when embedded inline. */
   onBack?: () => void;
 }) {
   const [month, setMonth] = useState(() => startOfMonth(value));
-  const atCurrentMonth = month >= startOfMonth(today);
+  const atCurrentMonth = !allowFuture && month >= startOfMonth(today);
   const navButton =
     "flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30";
 
@@ -76,7 +79,7 @@ export function CalendarView({
                   role="gridcell"
                   aria-selected={day === value}
                   aria-current={day === today ? "date" : undefined}
-                  disabled={day > today}
+                  disabled={!allowFuture && day > today}
                   onClick={() => onSelect(day)}
                   className={`mx-auto flex size-11 items-center justify-center rounded-full text-sm tabular-nums transition-colors disabled:text-muted-foreground/40 ${
                     day === value

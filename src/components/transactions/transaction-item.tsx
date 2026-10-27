@@ -16,7 +16,7 @@ export function describeTransaction(tx: TransactionListItem) {
         icon: tx.categoryIcon,
         color: tx.categoryColor,
         title: tx.description ?? tx.categoryName ?? "Expense",
-        detail: [tx.description ? tx.categoryName : null, tx.paymentMethodName],
+        detail: [tx.source === "scheduled" ? "↻ Recurring" : null, tx.description ? tx.categoryName : null, tx.paymentMethodName],
         amount: tx.amountPaise,
         sign: "-" as const,
       };

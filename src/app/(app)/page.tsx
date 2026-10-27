@@ -9,6 +9,7 @@ import { PeriodNav } from "@/components/dashboard/period-nav";
 import { SpendCalendar } from "@/components/dashboard/spend-calendar";
 import { PageHeader } from "@/components/page-header";
 import { PendingExpenses } from "@/components/quick-add/pending-expenses";
+import { UpcomingPaymentsCard } from "@/components/recurring/upcoming-card";
 import { TransactionItem } from "@/components/transactions/transaction-item";
 import { percentChange } from "@/lib/chart";
 import { dashboardPeriod, daysInRange, eachDay, formatMonthLabel, formatRangeLabel, todayIst } from "@/lib/dates";
@@ -16,6 +17,7 @@ import { formatINR } from "@/lib/money";
 import { paymentMethodIcon } from "@/lib/validators/settings";
 import { requireUser } from "@/server/auth";
 import { getDashboard } from "@/server/services/analytics";
+import { listUpcoming } from "@/server/services/recurring";
 import { listRecentTransactions } from "@/server/services/transactions";
 
 const params = z.object({
@@ -29,7 +31,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const { period: kind, anchor } = params.parse(await searchParams);
   const period = dashboardPeriod(kind, anchor && anchor <= today ? anchor : today, today);
 
-  const [data, recent] = await Promise.all([getDashboard(user.id, period), listRecentTransactions(user.id, 5)]);
+  const [data, recent, recurring] = await Promise.all([
+    getDashboard(user.id, period),
+    listRecentTransactions(user.id, 5),
+    listUpcoming(user.id, 7, today),
+  ]);
 
   const range = `from=${period.from}&to=${period.to}`;
   const periodName =
@@ -159,6 +165,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </DashboardCard>
         </div>
       )}
+
+      <UpcomingPaymentsCard upcoming={recurring.upcoming} hasAny={recurring.total > 0} today={today} />
 
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="text-sm font-medium text-muted-foreground">Recent</h2>

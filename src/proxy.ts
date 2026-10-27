@@ -2,7 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAllowedEmail } from "@/lib/auth-allowlist";
 
-const PUBLIC_PATHS = ["/login", "/auth/"];
+// /api/cron/* authenticates with CRON_SECRET inside the route.
+const PUBLIC_PATHS = ["/login", "/auth/", "/api/cron/"];
 
 /**
  * Refreshes the Supabase session cookie on every request and sends signed-out visitors to /login.

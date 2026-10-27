@@ -71,6 +71,8 @@ export const transactionFilters = z.object({
   method: z.uuid().optional().catch(undefined),
   account: z.uuid().optional().catch(undefined),
   type: z.enum(["expense", "income", "transfer", "adjustment"]).optional().catch(undefined),
+  /** "1" = only payments recorded automatically by recurring schedules. */
+  recurring: z.literal("1").optional().catch(undefined),
   from: isoDate.optional().catch(undefined),
   to: isoDate.optional().catch(undefined),
   limit: z.coerce.number().int().min(1).max(1000).optional().catch(undefined),

@@ -24,7 +24,7 @@ function assertDateNotFuture(txnDate: string) {
 }
 
 /** Archived items can't be newly chosen, but an edit may keep the one it already had. */
-async function assertCategory(userId: string, id: string, kind: "expense" | "income", keepId?: string | null) {
+export async function assertCategory(userId: string, id: string, kind: "expense" | "income", keepId?: string | null) {
   const [row] = await db
     .select({ kind: categories.kind, isArchived: categories.isArchived })
     .from(categories)
@@ -33,7 +33,7 @@ async function assertCategory(userId: string, id: string, kind: "expense" | "inc
   if (row.isArchived && id !== keepId) throw new UserError("That category was archived. Pick another one.");
 }
 
-async function getPaymentMethodAccount(userId: string, id: string, keepId?: string | null) {
+export async function getPaymentMethodAccount(userId: string, id: string, keepId?: string | null) {
   const [row] = await db
     .select({ accountId: paymentMethods.accountId, isArchived: paymentMethods.isArchived })
     .from(paymentMethods)
@@ -263,6 +263,7 @@ const toAccounts = alias(accounts, "to_accounts");
 function filterConditions(userId: string, f: TransactionFilters): SQL[] {
   const conditions: SQL[] = [eq(transactions.userId, userId), isNull(transactions.deletedAt)];
   if (f.type) conditions.push(eq(transactions.type, f.type));
+  if (f.recurring) conditions.push(eq(transactions.source, "scheduled"));
   if (f.category) conditions.push(eq(transactions.categoryId, f.category));
   if (f.method) conditions.push(eq(transactions.paymentMethodId, f.method));
   if (f.account) conditions.push(or(eq(transactions.accountId, f.account), eq(transactions.toAccountId, f.account))!);
@@ -282,6 +283,7 @@ const listColumns = {
   amountPaise: transactions.amountPaise,
   txnDate: transactions.txnDate,
   description: transactions.description,
+  source: transactions.source,
   createdAt: transactions.createdAt,
   categoryId: transactions.categoryId,
   categoryName: categories.name,

@@ -46,10 +46,22 @@ export function AmountField({
 }
 
 /** Today / Yesterday / Pick date, with the month calendar opening inline below. */
-export function DateField({ value, onChange, today }: { value: string; onChange: (d: string) => void; today: string }) {
+export function DateField({
+  value,
+  onChange,
+  today,
+  label = "Date",
+  allowFuture = false,
+}: {
+  value: string;
+  onChange: (d: string) => void;
+  today: string;
+  label?: string;
+  allowFuture?: boolean;
+}) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   return (
-    <FormField label="Date">
+    <FormField label={label}>
       <DateChooser
         value={value}
         today={today}
@@ -64,6 +76,7 @@ export function DateField({ value, onChange, today }: { value: string; onChange:
           <CalendarView
             value={value}
             today={today}
+            allowFuture={allowFuture}
             onSelect={(d) => {
               onChange(d);
               setCalendarOpen(false);

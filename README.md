@@ -4,6 +4,8 @@ Personal, mobile-first expense tracker. Next.js 16 (React + TypeScript) · Supab
 
 **Phase 1 features:** email-code sign-in (single allowlisted user) · quick add with offline queue · accounts, payment methods, categories · balances, add money, transfers, set actual balance · transactions list with search/filters, swipe to edit/delete with undo · spending dashboard · dark mode · installable PWA (opens offline) · CSV export · REST API (`/api/v1`) · weekly encrypted backups.
 
+**Phase 2A:** recurring payments (insurance yearly, Wi‑Fi every 3 months…) recorded automatically on their due dates.
+
 ## Setup
 
 1. Node 22 via nvm: `nvm use 22`
@@ -36,6 +38,14 @@ Sign-in uses Supabase email OTP. With a custom SMTP sender (e.g. Gmail + app pas
 - Every table has `user_id` + Supabase RLS.
 - Quick-add entries get a client UUID and go to a localStorage queue before sending; creates are idempotent on that id.
 
+## Recurring payments
+
+Fixed costs on a cycle of N days / months / years, paid from a chosen payment method (its account is debited). Each due payment is recorded as a normal expense (`source = 'scheduled'`, linked by `recurring_payment_id`), so balances, analytics and exports include it.
+
+- Dates are computed from the first payment date (`src/lib/recurrence.ts`), so month-end schedules don't drift (31 Jan → 28 Feb → 31 Mar).
+- Due payments are recorded when the app opens and by a daily Vercel Cron (`/api/cron/recurring`, 00:00 IST). Both are idempotent: a unique index on `(recurring_payment_id, txn_date)` makes a duplicate impossible, and a payment you delete is not re-created.
+- Editing applies from the next payment; pausing skips payments until resumed; deleting a schedule keeps the payments already recorded.
+
 ## API (`/api/v1`)
 
 Authenticate with the web session cookie, or `Authorization: Bearer <Supabase access token>` for a mobile app. Only the allowlisted email is accepted. Amounts are integer **paise**; dates are `YYYY-MM-DD` (IST).
@@ -52,6 +62,8 @@ Authenticate with the web session cookie, or `Authorization: Bearer <Supabase ac
 | `POST /transactions/:id/restore` | Undo a delete |
 | `GET /dashboard` | Dashboard numbers; `period=week\|month&anchor=YYYY-MM-DD` |
 | `GET /export` | CSV (same filters as `/transactions`) |
+| `GET /recurring` · `POST /recurring` | List / create recurring payments (`recordPast` to back-fill) |
+| `PATCH /recurring/:id` · `DELETE /recurring/:id` | Edit (or `{ "paused": bool }`) / delete |
 
 Errors are JSON: `400 { error, issues? }` for bad input, `401` when not signed in.
 
@@ -81,7 +93,7 @@ This restores into the same Supabase project as-is. Every row references your lo
 
 ## Deploying (Vercel)
 
-Import the GitHub repo in Vercel, set the env vars from `.env.example` (Production), keep the region `bom1` (`vercel.json`). Then in Supabase → Authentication → URL Configuration, set the Site URL to the Vercel URL and add `https://<your-app>.vercel.app/auth/callback` to Redirect URLs.
+Import the GitHub repo in Vercel, set the env vars from `.env.example` (Production) — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`, `ALLOWED_EMAIL`, `CRON_SECRET` — and keep the region `bom1` (`vercel.json`). The daily cron is declared in `vercel.json`; Vercel calls it with `Authorization: Bearer $CRON_SECRET`. Then in Supabase → Authentication → URL Configuration, set the Site URL to the Vercel URL and add `https://<your-app>.vercel.app/auth/callback` to Redirect URLs.
 
 ## Latency check
 

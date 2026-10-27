@@ -4,6 +4,7 @@ import {
   addMonths,
   dashboardPeriod,
   eachDay,
+  formatDueDate,
   daysInRange,
   endOfMonth,
   formatDayLabel,
@@ -152,5 +153,12 @@ describe("formatRangeLabel", () => {
 describe("formatShortMonthLabel", () => {
   it("abbreviates the month", () => {
     expect(formatShortMonthLabel("2026-09-15")).toMatch(/^Sep.* 2026$/);
+  });
+});
+
+describe("formatDueDate", () => {
+  it("adds the year only when it differs", () => {
+    expect(formatDueDate("2026-10-27", "2026-10-27")).toBe("Today");
+    expect(formatDueDate("2027-01-15", "2026-10-27")).toMatch(/^15 Jan 2027$/);
   });
 });

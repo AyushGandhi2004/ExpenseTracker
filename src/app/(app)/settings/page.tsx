@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, CreditCard, Download, Landmark, LogOut, Tags, type LucideIcon } from "lucide-react";
+import { ChevronRight, CreditCard, Download, Landmark, LogOut, Repeat, Tags, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/server/auth";
 import { listAccounts } from "@/server/services/accounts";
 import { listCategories } from "@/server/services/categories";
 import { listPaymentMethods } from "@/server/services/payment-methods";
+import { listRecurring } from "@/server/services/recurring";
 import { AppearancePicker } from "./appearance";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [accounts, methods, categories] = await Promise.all([
+  const [accounts, methods, categories, recurring] = await Promise.all([
     listAccounts(user.id),
     listPaymentMethods(user.id),
     listCategories(user.id),
+    listRecurring(user.id),
   ]);
   const active = <T extends { isArchived: boolean }>(rows: T[]) => rows.filter((r) => !r.isArchived).length;
 
@@ -23,6 +25,12 @@ export default async function SettingsPage() {
     { href: "/settings/accounts", label: "Accounts", detail: `${active(accounts)} active`, icon: Landmark },
     { href: "/settings/payment-methods", label: "Payment methods", detail: `${active(methods)} active`, icon: CreditCard },
     { href: "/settings/categories", label: "Categories", detail: `${active(categories)} active`, icon: Tags },
+    {
+      href: "/recurring",
+      label: "Recurring payments",
+      detail: `${recurring.filter((r) => !r.isPaused && r.nextDueDate).length} active`,
+      icon: Repeat,
+    },
   ];
 
   return (

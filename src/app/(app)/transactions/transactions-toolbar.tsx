@@ -61,6 +61,7 @@ export function TransactionsToolbar({ filters, options }: { filters: Transaction
 
   const nameOf = (list: Option[], id?: string) => list.find((o) => o.id === id)?.name;
   const chips: { label: string; clear: Partial<TransactionFilters> }[] = [];
+  if (filters.recurring) chips.push({ label: "Recurring", clear: { recurring: undefined } });
   if (filters.type) chips.push({ label: TYPES.find((t) => t.value === filters.type)?.label ?? "Adjustments", clear: { type: undefined } });
   if (filters.from || filters.to) {
     const preset = PERIODS.find((p) => {
@@ -223,6 +224,14 @@ function FilterSheet({
               {t.label}
             </button>
           ))}
+          <button
+            type="button"
+            aria-pressed={draft.recurring === "1"}
+            className={segment}
+            onClick={() => set({ recurring: draft.recurring ? undefined : "1" })}
+          >
+            ↻ Recurring only
+          </button>
         </div>
       </FormField>
 
