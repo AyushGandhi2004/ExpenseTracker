@@ -129,3 +129,37 @@ describe("shortInterval", () => {
     expect(shortInterval("day", 28)).toBe("28 days");
   });
 });
+
+describe("month-end schedules", () => {
+  const salary: Schedule = {
+    startDate: "2026-10-15",
+    intervalUnit: "month",
+    intervalCount: 1,
+    monthEnd: true,
+    endType: "never",
+    endDate: null,
+    endCount: null,
+  };
+
+  it("always lands on the last day, including from a 30th or mid-month start", () => {
+    expect([0, 1, 2, 3, 4].map((n) => occurrenceDate(salary, n))).toEqual([
+      "2026-10-31",
+      "2026-11-30",
+      "2026-12-31",
+      "2027-01-31",
+      "2027-02-28",
+    ]);
+    expect(occurrenceDate({ ...salary, startDate: "2026-11-30" }, 1)).toBe("2026-12-31");
+    expect(occurrenceDate({ ...salary, startDate: "2028-01-05" }, 1)).toBe("2028-02-29");
+  });
+
+  it("without the flag a 30th stays the 30th", () => {
+    expect(occurrenceDate({ ...salary, startDate: "2026-11-30", monthEnd: false }, 1)).toBe("2026-12-30");
+  });
+
+  it("is due only once the last day arrives, and is described in words", () => {
+    expect(dueOccurrences(salary, 0, "2026-10-30")).toEqual([]);
+    expect(dueOccurrences(salary, 0, "2026-10-31")).toEqual([{ n: 0, date: "2026-10-31" }]);
+    expect(describeInterval("month", 1, true)).toBe("Last day of every month");
+  });
+});

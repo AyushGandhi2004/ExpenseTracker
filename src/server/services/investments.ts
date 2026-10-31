@@ -9,6 +9,7 @@ import {
   parsePrice,
   parseQuantity,
   portfolioSummary,
+  unitsFor,
   valuePaise,
   type Trade,
 } from "@/lib/portfolio";
@@ -26,7 +27,7 @@ import {
   type Instrument,
 } from "@/server/db/schema";
 import { UserError } from "@/server/errors";
-import { fundLatest, savedPrice, stockChart } from "./prices";
+import { fundLatest, priceForTrade, savedPrice, stockChart } from "./prices";
 import { assertAccount, assertDateNotFuture, getPaymentMethodAccount } from "./transactions";
 
 type Db = typeof db;
@@ -343,6 +344,43 @@ async function setTradeDeleted(tx: Tx, trade: { id: string; cashTransactionId: s
   if (trade.cashTransactionId) {
     await tx.update(transactions).set({ deletedAt }).where(eq(transactions.id, trade.cashTransactionId));
   }
+}
+
+/**
+ * SIP instalments recorded before their day's NAV was published used the latest NAV. Once the
+ * real one is out, recompute their units. Returns how many were corrected. A correction that
+ * would break a later sale leaves the units as they are.
+ */
+export async function finalizeEstimatedUnits(userId: string | null) {
+  const rows = await db
+    .select({ trade: investmentTransactions, instrument: instruments })
+    .from(investmentTransactions)
+    .innerJoin(instruments, eq(instruments.id, investmentTransactions.instrumentId))
+    .where(
+      and(
+        eq(investmentTransactions.unitsEstimated, true),
+        isNull(investmentTransactions.deletedAt),
+        userId ? eq(investmentTransactions.userId, userId) : undefined,
+      ),
+    );
+
+  let finalized = 0;
+  for (const { trade, instrument } of rows) {
+    const nav = await priceForTrade(instrument, trade.tradeDate);
+    if (!nav || nav.estimated) continue;
+    const quantity = formatQuantity(unitsFor(trade.amountPaise - trade.chargesPaise, nav.price));
+    await db.transaction(async (tx) => {
+      await tx.select({ id: instruments.id }).from(instruments).where(eq(instruments.id, instrument.id)).for("update");
+      const others = (await liveTrades(trade.userId, instrument.id, tx)).filter((t) => t.id !== trade.id).map(toTrade);
+      const fits = !findOversell([...others, toTrade({ ...trade, quantity })]);
+      await tx
+        .update(investmentTransactions)
+        .set(fits ? { quantity, price: formatPrice(nav.price), unitsEstimated: false } : { unitsEstimated: false })
+        .where(eq(investmentTransactions.id, trade.id));
+    });
+    finalized++;
+  }
+  return finalized;
 }
 
 // ── Reading ──────────────────────────────────────────────────────────────────

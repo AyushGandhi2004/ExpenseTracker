@@ -78,16 +78,19 @@ export async function fundLatest(schemeCode: string) {
   return history ? { name: history.name, isin: history.isin, latest: history.navs.at(-1) ?? null } : null;
 }
 
-const historyCache = new Map<string, { at: number; navs: PricePoint[] }>();
+const historyCache = new Map<string, { at: number; navs: PricePoint[] | null }>();
+const HISTORY_TTL_MS = 10 * 60_000;
+/** A failed fetch is remembered briefly, so a feed outage doesn't slow every page load. */
+const HISTORY_FAILURE_TTL_MS = 2 * 60_000;
 
-/** Full NAV history (oldest first), cached for 10 minutes per scheme. */
+/** Full NAV history (oldest first), cached per scheme. */
 export async function fundNavHistory(schemeCode: string): Promise<PricePoint[] | null> {
   const cached = historyCache.get(schemeCode);
-  if (cached && Date.now() - cached.at < 10 * 60_000) return cached.navs;
+  if (cached && Date.now() - cached.at < (cached.navs ? HISTORY_TTL_MS : HISTORY_FAILURE_TTL_MS)) return cached.navs;
   const history = parseFundHistory(await fetchJson(`${MFAPI}/${encodeURIComponent(schemeCode)}`));
-  if (!history) return null;
-  historyCache.set(schemeCode, { at: Date.now(), navs: history.navs });
-  return history.navs;
+  const navs = history?.navs ?? null;
+  historyCache.set(schemeCode, { at: Date.now(), navs });
+  return navs;
 }
 
 /** Latest NAV of every scheme from AMFI's official daily file. */

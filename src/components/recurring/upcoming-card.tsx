@@ -6,7 +6,7 @@ import { formatDueDate } from "@/lib/dates";
 import { formatINR } from "@/lib/money";
 import type { RecurringRow } from "@/server/services/recurring";
 
-/** Home card: recurring payments due in the next 7 days (or a prompt to set them up). */
+/** Home card: recurring items due in the next 7 days (or a prompt to set them up). */
 export function UpcomingPaymentsCard({ upcoming, hasAny, today }: { upcoming: RecurringRow[]; hasAny: boolean; today: string }) {
   if (!hasAny) {
     return (
@@ -16,8 +16,8 @@ export function UpcomingPaymentsCard({ upcoming, hasAny, today }: { upcoming: Re
       >
         <Repeat className="size-5 text-muted-foreground" aria-hidden />
         <span className="flex flex-1 flex-col">
-          <span className="text-sm font-medium">Automate fixed costs</span>
-          <span className="text-xs text-muted-foreground">Insurance, Wi‑Fi, rent… recorded on their due dates</span>
+          <span className="text-sm font-medium">Automate what repeats</span>
+          <span className="text-xs text-muted-foreground">Salary, rent, insurance, SIPs… recorded on their dates</span>
         </span>
       </Link>
     );
@@ -26,7 +26,7 @@ export function UpcomingPaymentsCard({ upcoming, hasAny, today }: { upcoming: Re
   return (
     <div className="mb-6">
       <DashboardCard
-        title="Upcoming payments"
+        title="Upcoming"
         action={
           <Link href="/recurring" className="text-sm font-medium hover:underline">
             Manage
@@ -39,14 +39,17 @@ export function UpcomingPaymentsCard({ upcoming, hasAny, today }: { upcoming: Re
           <ul className="-mx-1 flex flex-col">
             {upcoming.map((r) => (
               <li key={r.id} className="flex items-center gap-3 px-1 py-1.5">
-                <IconBadge icon={r.categoryIcon} color={r.categoryColor} className="size-8 [&_svg]:size-4" />
+                <IconBadge icon={r.kind === "sip" ? "invest" : r.categoryIcon} color={r.categoryColor} className="size-8 [&_svg]:size-4" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm font-medium">{r.name}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {formatDueDate(r.nextDueDate!, today)} · {r.paymentMethodName}
+                    {formatDueDate(r.nextDueDate!, today)} · {r.kind === "income" ? `into ${r.accountName}` : r.paymentMethodName}
                   </span>
                 </span>
-                <span className="text-sm font-semibold tabular-nums">{formatINR(r.amountPaise)}</span>
+                <span className={`text-sm font-semibold tabular-nums ${r.kind === "income" ? "text-viz-good" : ""}`}>
+                  {r.kind === "income" ? "+" : ""}
+                  {formatINR(r.amountPaise)}
+                </span>
               </li>
             ))}
           </ul>

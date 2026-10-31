@@ -10,6 +10,7 @@ import {
   parseQuantity,
   portfolioSummary,
   priceFor,
+  stampDuty,
   unitsFor,
   valuePaise,
   type Trade,
@@ -47,6 +48,11 @@ describe("value and units", () => {
   it("allots MF units to 3 decimals", () => {
     expect(unitsFor(3_000_00, p("89.30"))).toBe(q("33.595")); // 3000 / 89.3 = 33.5946…
     expect(unitsFor(5_000_00, p("0"))).toBe(0n);
+  });
+
+  it("works out SIP units after stamp duty", () => {
+    expect(stampDuty(5_000_00)).toBe(25);
+    expect(unitsFor(5_000_00 - stampDuty(5_000_00), p("89.30"))).toBe(q("55.988"));
   });
 
   it("derives price from amount and quantity", () => {

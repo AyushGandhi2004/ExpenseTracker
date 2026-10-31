@@ -75,6 +75,9 @@ export function unitsFor(amountPaise: number, price: bigint, unitDecimals = 3): 
   return divRound(exact, step) * step;
 }
 
+/** Stamp duty on mutual fund purchases: 0.005% of the amount, in paise. */
+export const stampDuty = (amountPaise: number) => Math.round((amountPaise * 5) / 100_000);
+
 /** Price per unit (×1e4) implied by an amount for a quantity. */
 export function priceFor(amountPaise: number, quantity: bigint): bigint {
   if (quantity <= 0n) return 0n;

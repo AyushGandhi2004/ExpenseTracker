@@ -1,11 +1,12 @@
 import { timingSafeEqual } from "node:crypto";
+import { finalizeEstimatedUnits } from "@/server/services/investments";
 import { refreshPrices } from "@/server/services/prices";
 import { materializeAllDue } from "@/server/services/recurring";
 
 /**
- * Daily job (Vercel Cron, see vercel.json): records recurring payments that came due, so
- * balances are right even on days the app isn't opened, then refreshes every holding's
- * NAV/price. Vercel sends `Authorization: Bearer $CRON_SECRET`. Idempotent — safe to call
+ * Daily job (Vercel Cron, see vercel.json): records recurring payments, credits and SIPs that came due, so
+ * balances are right even on days the app isn't opened, then settles SIP units and refreshes
+ * every holding's NAV/price. Vercel sends `Authorization: Bearer $CRON_SECRET`. Idempotent — safe to call
  * more than once.
  */
 export async function GET(request: Request) {
@@ -18,7 +19,9 @@ export async function GET(request: Request) {
 
   const recurring = await materializeAllDue();
   // A price-feed outage must not fail the job (payments above are already recorded).
-  const prices = await refreshPrices(null, { force: true }).catch((error: unknown) => {
+  const prices = await finalizeEstimatedUnits(null)
+    .then(() => refreshPrices(null, { force: true }))
+    .catch((error: unknown) => {
     console.error("[cron] price refresh failed", error);
     return { error: "price refresh failed" };
   });

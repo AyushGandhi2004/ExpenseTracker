@@ -4,6 +4,8 @@ export type RecurringTemplate = {
   name: string;
   intervalUnit: IntervalUnit;
   intervalCount: number;
+  /** Always on the last day of the month. */
+  monthEnd?: boolean;
   /** Preferred category names, best match first. */
   categories: string[];
 };
@@ -18,6 +20,13 @@ export const RECURRING_TEMPLATES: RecurringTemplate[] = [
   { name: "Electricity", intervalUnit: "month", intervalCount: 1, categories: ["Bills"] },
   { name: "Gym", intervalUnit: "month", intervalCount: 1, categories: ["Health", "Other"] },
   { name: "Vehicle insurance", intervalUnit: "year", intervalCount: 1, categories: ["Transport", "Bills"] },
+];
+
+/** Quick picks for money that comes in regularly. */
+export const INCOME_TEMPLATES: RecurringTemplate[] = [
+  { name: "Salary", intervalUnit: "month", intervalCount: 1, monthEnd: true, categories: ["Salary"] },
+  { name: "Rent received", intervalUnit: "month", intervalCount: 1, categories: ["Rent", "Other"] },
+  { name: "Interest", intervalUnit: "month", intervalCount: 3, categories: ["Interest", "Other"] },
 ];
 
 /** The first preferred category that exists (case-insensitive), else "Bills", "Other", or the first one. */

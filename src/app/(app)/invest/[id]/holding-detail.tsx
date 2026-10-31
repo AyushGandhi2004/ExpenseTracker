@@ -1,10 +1,12 @@
 "use client";
 
-import { Archive, ArchiveRestore, Minus, Plus } from "lucide-react";
+import Link from "next/link";
+import { Archive, ArchiveRestore, Minus, Plus, Repeat } from "lucide-react";
 import { useState } from "react";
 import { fieldClass, FormField } from "@/components/form-field";
 import { FormSheet } from "@/components/form-sheet";
 import { DateField } from "@/components/money/fields";
+import { pickedOf } from "@/components/invest/picked";
 import { formatUnitPrice, kindLabel, Pnl, unitsLabel } from "@/components/invest/pnl";
 import { TradeSheet, type TradeSheetMode } from "@/components/invest/trade-sheet";
 import { PageHeader } from "@/components/page-header";
@@ -15,7 +17,6 @@ import { formatINR } from "@/lib/money";
 import type { HoldingDetail as Detail, HoldingView } from "@/server/services/investments";
 import type { QuickAddOptions } from "@/server/services/quick-add";
 import { setArchived, setManualPrice } from "../actions";
-import { pickedOf } from "../invest-manager";
 
 const SOURCE_LABEL = { amfi: "AMFI", yahoo: "Yahoo Finance", manual: "typed by you" } as const;
 const TRADE_SOURCE = { manual: null, sip: "SIP", import: "Imported", converted: "Converted" } as const;
@@ -104,6 +105,15 @@ export function HoldingDetail({
         </Button>
       </div>
 
+      {h.kind === "mutual_fund" && (
+        <Link
+          href={`/recurring?new=sip&fund=${h.id}`}
+          className="-mt-3 mb-6 flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-medium hover:bg-muted"
+        >
+          <Repeat className="size-4" aria-hidden /> Start a SIP in this fund
+        </Link>
+      )}
+
       <section aria-labelledby="trades-title" className="mb-6">
         <h2 id="trades-title" className="mb-2 px-1 text-sm font-medium text-muted-foreground">
           Transactions
@@ -125,6 +135,9 @@ export function HoldingDetail({
                       <span className="flex items-center gap-2 font-medium">
                         {t.type === "buy" ? (h.kind === "mutual_fund" ? "Invested" : "Bought") : "Sold"}
                         {tag && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{tag}</span>}
+                        {t.unitsEstimated && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Units estimated</span>
+                        )}
                       </span>
                       <span className="truncate text-xs text-muted-foreground">
                         {formatShortDay(t.tradeDate)} · {t.quantity} {what} @ {formatUnitPrice(t.price)}

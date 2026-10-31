@@ -6,6 +6,8 @@ Personal, mobile-first expense tracker. Next.js 16 (React + TypeScript) · Supab
 
 **Phase 2A:** recurring payments (insurance yearly, Wi‑Fi every 3 months…) recorded automatically on their due dates.
 
+**Phase 2B.2:** recurring income (salary on the last day of every month…) and SIPs recorded automatically, with units from each date's NAV.
+
 **Phase 2B.1:** investments — mutual funds and NSE/BSE stocks: buy/sell, holdings with current value and profit/loss, automatic NAVs/prices, and converting old "Investment" expenses.
 
 ## Setup
@@ -40,9 +42,13 @@ Sign-in uses Supabase email OTP. With a custom SMTP sender (e.g. Gmail + app pas
 - Every table has `user_id` + Supabase RLS.
 - Quick-add entries get a client UUID and go to a localStorage queue before sending; creates are idempotent on that id.
 
-## Recurring payments
+## Recurring payments, income and SIPs
 
-Fixed costs on a cycle of N days / months / years, paid from a chosen payment method (its account is debited). Each due payment is recorded as a normal expense (`source = 'scheduled'`, linked by `recurring_payment_id`), so balances, analytics and exports include it.
+Anything on a cycle of N days / months / years. `recurring_payments.kind` decides what each due date records (`source = 'scheduled'`, linked by `recurring_payment_id`), so balances, analytics and exports include it:
+
+- `expense`: an expense, debited from the chosen payment method's account.
+- `income`: money in, credited to the chosen account. Monthly cycles can be "always the last day of the month" (`month_end`). If one month's amount differs, edit that transaction.
+- `sip`: an `invest` debit plus a buy of (amount − stamp duty) ÷ NAV units. If the date's NAV isn't published yet, the latest is used and the units are marked estimated, then corrected when the Invest screen opens, on Refresh, or by the cron. With no price at all, the instalment stays due and is retried.
 
 - Dates are computed from the first payment date (`src/lib/recurrence.ts`), so month-end schedules don't drift (31 Jan → 28 Feb → 31 Mar).
 - Due payments are recorded when the app opens and by a daily Vercel Cron (`/api/cron/daily`, 00:00 IST — it also refreshes investment prices). Both are idempotent: a unique index on `(recurring_payment_id, txn_date)` makes a duplicate impossible, and a payment you delete is not re-created.
@@ -74,7 +80,7 @@ Authenticate with the web session cookie, or `Authorization: Bearer <Supabase ac
 | `POST /transactions/:id/restore` | Undo a delete |
 | `GET /dashboard` | Dashboard numbers; `period=week\|month&anchor=YYYY-MM-DD` |
 | `GET /export` | CSV (same filters as `/transactions`) |
-| `GET /recurring` · `POST /recurring` | List / create recurring payments (`recordPast` to back-fill) |
+| `GET /recurring` · `POST /recurring` | List / create recurring payments (`kind`: `expense`, `income` + `accountId`, or `sip` + `instrumentId`/`instrument`; `monthEnd`; `recordPast` to back-fill) |
 | `PATCH /recurring/:id` · `DELETE /recurring/:id` | Edit (or `{ "paused": bool }`) / delete |
 | `GET /instruments/search` | `kind=mutual_fund\|stock&q=…` |
 | `GET /instruments/price` | Price for a trade date: `kind, schemeCode \| symbol+exchange, date` |

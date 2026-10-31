@@ -9,13 +9,11 @@ import { Button } from "@/components/ui/button";
 import { useAction } from "@/hooks/use-action";
 import { formatShortDay } from "@/lib/dates";
 import { formatINR } from "@/lib/money";
-import { formatPrice, formatQuantity, parsePrice, parseQuantity, unitsFor } from "@/lib/portfolio";
+import { formatPrice, formatQuantity, parsePrice, parseQuantity, stampDuty, unitsFor } from "@/lib/portfolio";
 import type { ConvertibleExpense } from "@/server/services/investments";
 import { fetchTradePrice, type FetchedPrice } from "./fetch-price";
 import { InstrumentSearch, refOf, type PickedInstrument } from "./instrument-search";
 import { unitsLabel } from "./pnl";
-
-const stampDuty = (amountPaise: number) => Math.round((amountPaise * 5) / 100_000);
 
 /**
  * Turns an expense filed under "Investment" into a buy: pick the expense, then the fund or

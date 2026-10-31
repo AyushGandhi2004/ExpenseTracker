@@ -25,7 +25,7 @@ export function describeTransaction(tx: TransactionListItem) {
         icon: tx.categoryIcon,
         color: tx.categoryColor,
         title: tx.description ?? tx.categoryName ?? "Money added",
-        detail: [tx.description ? tx.categoryName : null, `into ${tx.accountName}`],
+        detail: [tx.source === "scheduled" ? "↻ Recurring" : null, tx.description ? tx.categoryName : null, `into ${tx.accountName}`],
         amount: tx.amountPaise,
         sign: "+" as const,
       };
@@ -52,7 +52,7 @@ export function describeTransaction(tx: TransactionListItem) {
         icon: "invest",
         color: null,
         title: tx.instrumentName ?? tx.description ?? "Investment",
-        detail: ["Invested", tx.paymentMethodName ?? tx.accountName],
+        detail: [tx.source === "scheduled" ? "↻ SIP" : "Invested", tx.paymentMethodName ?? tx.accountName],
         amount: tx.amountPaise,
         sign: "-" as const,
       };

@@ -54,6 +54,7 @@ export const tradeSource = pgEnum("trade_source", ["manual", "sip", "import", "c
 export const transactionSource = pgEnum("transaction_source", ["manual", "import", "ai", "scheduled"]);
 export const intervalUnit = pgEnum("interval_unit", ["day", "month", "year"]);
 export const recurrenceEnd = pgEnum("recurrence_end", ["never", "on_date", "after_count"]);
+export const recurringKind = pgEnum("recurring_kind", ["expense", "income", "sip"]);
 
 // Number mode is safe up to 2^53 paise (~₹90 trillion).
 const money = () => bigint({ mode: "number" });
@@ -153,16 +154,18 @@ export const recurringPayments = pgTable(
     userId: ownerId(),
     name: text().notNull(),
     amountPaise: money().notNull(),
-    categoryId: uuid()
-      .notNull()
-      .references(() => categories.id, { onDelete: "restrict" }),
-    paymentMethodId: uuid()
-      .notNull()
-      .references(() => paymentMethods.id, { onDelete: "restrict" }),
+    // expense: category + payment method. income: category + account. sip: instrument + payment method.
+    kind: recurringKind().notNull().default("expense"),
+    categoryId: uuid().references(() => categories.id, { onDelete: "restrict" }),
+    paymentMethodId: uuid().references(() => paymentMethods.id, { onDelete: "restrict" }),
+    accountId: uuid().references(() => accounts.id, { onDelete: "restrict" }),
+    instrumentId: uuid().references(() => instruments.id, { onDelete: "restrict" }),
     // First deduction (IST calendar day).
     startDate: date({ mode: "string" }).notNull(),
     intervalUnit: intervalUnit().notNull(),
     intervalCount: integer().notNull(),
+    // Monthly cycles only: always the last day of the month (salary on 30 Nov, 31 Dec…).
+    monthEnd: boolean().notNull().default(false),
     endType: recurrenceEnd().notNull().default("never"),
     endDate: date({ mode: "string" }),
     endCount: integer(),
@@ -183,6 +186,12 @@ export const recurringPayments = pgTable(
       sql`(${t.endType} = 'on_date') = (${t.endDate} is not null)
           and (${t.endType} = 'after_count') = (${t.endCount} is not null)
           and (${t.endCount} is null or ${t.endCount} >= 1)`,
+    ),
+    check(
+      "recurring_payments_kind_ck",
+      sql`(${t.kind} = 'expense' and ${t.categoryId} is not null and ${t.paymentMethodId} is not null)
+          or (${t.kind} = 'income' and ${t.categoryId} is not null and ${t.accountId} is not null)
+          or (${t.kind} = 'sip' and ${t.instrumentId} is not null and ${t.paymentMethodId} is not null)`,
     ),
     ownerPolicy("recurring_payments"),
   ],

@@ -1,40 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, RefreshCw, TrendingUp } from "lucide-react";
+import { ChevronRight, RefreshCw, Repeat, TrendingUp } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AddButton } from "@/components/add-button";
 import { ConvertSheet } from "@/components/invest/convert-sheet";
-import type { PickedInstrument } from "@/components/invest/instrument-search";
+import { pickedOf } from "@/components/invest/picked";
 import { formatUnitPrice, kindLabel, Pnl, unitsLabel } from "@/components/invest/pnl";
 import { TradeSheet } from "@/components/invest/trade-sheet";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { formatShortDay } from "@/lib/dates";
+import { formatDueDate, formatShortDay } from "@/lib/dates";
 import { formatINR } from "@/lib/money";
+import { describeInterval, monthlyEquivalent } from "@/lib/recurrence";
 import type { ConvertibleExpense, HoldingView, Holdings } from "@/server/services/investments";
 import type { QuickAddOptions } from "@/server/services/quick-add";
+import type { RecurringRow } from "@/server/services/recurring";
 import { refreshAllPrices } from "./actions";
-
-export const pickedOf = (h: HoldingView): PickedInstrument => ({
-  instrumentId: h.id,
-  kind: h.kind,
-  name: h.name,
-  schemeCode: h.schemeCode,
-  symbol: h.symbol,
-  exchange: h.exchange,
-});
 
 export function InvestManager({
   holdings,
   options,
   convertible,
+  sips,
   today,
 }: {
   holdings: Holdings;
   options: QuickAddOptions;
   convertible: ConvertibleExpense[];
+  sips: RecurringRow[];
   today: string;
 }) {
   const [sheet, setSheet] = useState<{ key: number; open: boolean; kind: "trade" | "convert" }>({ key: 0, open: false, kind: "trade" });
@@ -89,6 +84,9 @@ export function InvestManager({
           <Button className="mt-4" onClick={() => show("trade")}>
             Add investment
           </Button>
+          <Link href="/recurring?new=sip" className="mt-3 block text-sm font-medium underline-offset-2 hover:underline">
+            Or start a SIP
+          </Link>
         </div>
       ) : (
         <>
@@ -122,6 +120,8 @@ export function InvestManager({
           </section>
 
           <Allocation fundsPaise={summary.byKind.mutual_fund} stocksPaise={summary.byKind.stock} />
+
+          <Sips sips={sips} today={today} />
 
           {openHoldings.length > 0 && (
             <section aria-labelledby="holdings-title" className="mb-6">
@@ -205,6 +205,43 @@ function PnlOnPrimary({ paise, pct }: { paise: number; pct: string | null }) {
       {formatINR(Math.abs(paise))}
       {pct && <span className="opacity-80"> ({pct})</span>}
     </span>
+  );
+}
+
+/** Active SIPs with their monthly total; managing them happens on the Recurring screen. */
+function Sips({ sips, today }: { sips: RecurringRow[]; today: string }) {
+  const running = sips.filter((s) => !s.isPaused && s.nextDueDate);
+  const total = running.reduce((sum, s) => sum + monthlyEquivalent(s.amountPaise, s.intervalUnit, s.intervalCount), 0);
+  return (
+    <section aria-labelledby="sips-title" className="mb-6">
+      <div className="mb-2 flex items-baseline justify-between px-1">
+        <h2 id="sips-title" className="text-sm font-medium text-muted-foreground">
+          SIPs{running.length > 0 && ` · about ${formatINR(Math.round(total / 100) * 100)} a month`}
+        </h2>
+        <Link href="/recurring?new=sip" className="text-sm font-medium hover:underline">
+          Start a SIP
+        </Link>
+      </div>
+      {sips.length > 0 && (
+        <ul className="divide-y overflow-hidden rounded-xl border">
+          {sips.map((s) => (
+            <li key={s.id}>
+              <Link href="/recurring" className={`flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-muted/60 ${s.isPaused || !s.nextDueDate ? "opacity-60" : ""}`}>
+                <Repeat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium">{s.instrumentName ?? s.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {describeInterval(s.intervalUnit, s.intervalCount, s.monthEnd)}
+                    {s.isPaused ? " · Paused" : s.nextDueDate ? ` · next ${formatDueDate(s.nextDueDate, today)}` : " · Ended"}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums">{formatINR(s.amountPaise)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

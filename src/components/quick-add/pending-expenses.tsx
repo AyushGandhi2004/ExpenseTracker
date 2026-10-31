@@ -3,6 +3,7 @@
 import { CloudOff, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { TransactionRow } from "@/components/transaction-row";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { formatDayLabel } from "@/lib/dates";
 import { useQuickAdd } from "./quick-add-provider";
@@ -61,15 +62,16 @@ export function PendingExpenses() {
                 <Button size="sm" variant="outline" onClick={() => retry(item.payload.id)}>
                   Retry
                 </Button>
-                <Button
+                <ConfirmButton
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
-                    if (window.confirm("Discard this expense? It hasn't been saved.")) discard(item.payload.id);
-                  }}
+                  wrapperClassName="flex flex-col-reverse items-end gap-1"
+                  confirmLabel="Confirm discard"
+                  message="It hasn't been saved."
+                  onConfirm={() => discard(item.payload.id)}
                 >
                   Discard
-                </Button>
+                </ConfirmButton>
               </div>
             )}
           </li>

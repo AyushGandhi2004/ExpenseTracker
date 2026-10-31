@@ -12,15 +12,12 @@ import { Button } from "@/components/ui/button";
 import { useAction } from "@/hooks/use-action";
 import { formatShortDay } from "@/lib/dates";
 import { formatINR, paiseToRupeesString, parseRupeesToPaise } from "@/lib/money";
-import { formatPrice, formatQuantity, parsePrice, parseQuantity, unitsFor, valuePaise } from "@/lib/portfolio";
+import { formatPrice, formatQuantity, parsePrice, parseQuantity, stampDuty, unitsFor, valuePaise } from "@/lib/portfolio";
 import type { QuickAddOptions } from "@/server/services/quick-add";
 import type { TradeRow } from "@/server/services/investments";
 import { fetchTradePrice, type FetchedPrice } from "./fetch-price";
 import { InstrumentSearch, refOf, type PickedInstrument } from "./instrument-search";
 import { formatUnitPrice, unitsLabel } from "./pnl";
-
-/** Stamp duty on mutual fund purchases: 0.005% of the amount. */
-const stampDuty = (amountPaise: number) => Math.round((amountPaise * 5) / 100_000);
 
 export type TradeSheetMode =
   | { kind: "new"; type: "buy" | "sell"; instrument?: PickedInstrument; heldQuantity?: string }

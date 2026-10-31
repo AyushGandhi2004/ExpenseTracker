@@ -31,8 +31,10 @@ type Result = { schemeCode?: string; symbol?: string; exchange?: "NSE" | "BSE"; 
 export function InstrumentSearch({
   holdings,
   onPick,
+  fundsOnly = false,
 }: {
   holdings: PickedInstrument[];
+  fundsOnly?: boolean;
   onPick: (p: PickedInstrument) => void;
 }) {
   const [kind, setKind] = useState<"mutual_fund" | "stock">("mutual_fund");
@@ -74,22 +76,24 @@ export function InstrumentSearch({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Type">
-        {(["mutual_fund", "stock"] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            aria-pressed={kind === k}
-            className={segment}
-            onClick={() => {
-              setKind(k);
-              search(query, k);
-            }}
-          >
-            {k === "mutual_fund" ? "Mutual fund" : "Stock"}
-          </button>
-        ))}
-      </div>
+      {!fundsOnly && (
+        <div className="flex gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Type">
+          {(["mutual_fund", "stock"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={kind === k}
+              className={segment}
+              onClick={() => {
+                setKind(k);
+                search(query, k);
+              }}
+            >
+              {k === "mutual_fund" ? "Mutual fund" : "Stock"}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />

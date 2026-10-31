@@ -14,6 +14,8 @@ export type Schedule = {
   startDate: IsoDate;
   intervalUnit: IntervalUnit;
   intervalCount: number;
+  /** Monthly cycles: always the last day of the month, whatever the start date's day. */
+  monthEnd?: boolean;
   endType: EndType;
   endDate: IsoDate | null;
   endCount: number | null;
@@ -35,7 +37,8 @@ export function occurrenceDate(s: Schedule, n: number): IsoDate {
   const total = (m - 1) + months;
   const year = y + Math.floor(total / 12);
   const month0 = ((total % 12) + 12) % 12;
-  const day = Math.min(d, daysInMonth(year, month0));
+  const last = daysInMonth(year, month0);
+  const day = s.monthEnd && s.intervalUnit === "month" ? last : Math.min(d, last);
   return `${year}-${pad(month0 + 1)}-${pad(day)}`;
 }
 
@@ -96,7 +99,8 @@ export function monthlyEquivalent(amountPaise: number, unit: IntervalUnit, count
 }
 
 /** "Every day", "Every 28 days", "Every month", "Every 3 months", "Every year", "Every 2 years". */
-export function describeInterval(unit: IntervalUnit, count: number): string {
+export function describeInterval(unit: IntervalUnit, count: number, monthEnd = false): string {
+  if (monthEnd && unit === "month") return count === 1 ? "Last day of every month" : `Last day of every ${count} months`;
   return count === 1 ? `Every ${unit}` : `Every ${count} ${unit}s`;
 }
 

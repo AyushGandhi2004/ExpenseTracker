@@ -45,6 +45,7 @@ export async function refreshAllPrices(): Promise<{ checked: number; updated: nu
   const user = await requireUser();
   let result = { checked: 0, updated: 0, failed: 0 };
   const outcome = await runAction(async () => {
+    await investments.finalizeEstimatedUnits(user.id);
     result = await refreshPrices(user.id);
   });
   return outcome.ok ? result : { ...result, failed: result.failed || 1 };

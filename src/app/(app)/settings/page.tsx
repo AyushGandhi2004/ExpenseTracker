@@ -27,7 +27,7 @@ export default async function SettingsPage() {
     { href: "/settings/categories", label: "Categories", detail: `${active(categories)} active`, icon: Tags },
     {
       href: "/recurring",
-      label: "Recurring payments",
+      label: "Recurring",
       detail: `${recurring.filter((r) => !r.isPaused && r.nextDueDate).length} active`,
       icon: Repeat,
     },
