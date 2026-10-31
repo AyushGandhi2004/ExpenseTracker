@@ -29,6 +29,13 @@
       "when": 1793416224348,
       "tag": "0003_recurring_kinds",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793418339780,
+      "tag": "0004_not_investment",
+      "breakpoints": true
     }
   ]
 }

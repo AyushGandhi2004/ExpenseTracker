@@ -13,6 +13,7 @@ import { formatPrice, formatQuantity, parsePrice, parseQuantity, stampDuty, unit
 import type { ConvertibleExpense } from "@/server/services/investments";
 import { fetchTradePrice, type FetchedPrice } from "./fetch-price";
 import { InstrumentSearch, refOf, type PickedInstrument } from "./instrument-search";
+import { NotInvestmentButton } from "./not-investment-button";
 import { unitsLabel } from "./pnl";
 
 /**
@@ -58,7 +59,7 @@ export function ConvertSheet({
         <ul className="divide-y overflow-hidden rounded-xl border">
           {expenses.map((e) => (
             <li key={e.id}>
-              <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/60" onClick={() => setExpense(e)}>
+              <button type="button" className="flex w-full items-center gap-3 px-4 pt-3 pb-1 text-left hover:bg-muted/60" onClick={() => setExpense(e)}>
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-medium">{e.description ?? e.categoryName}</span>
                   <span className="truncate text-xs text-muted-foreground">
@@ -68,6 +69,9 @@ export function ConvertSheet({
                 </span>
                 <span className="shrink-0 font-semibold tabular-nums">{formatINR(e.amountPaise)}</span>
               </button>
+              <div className="px-2 pb-2">
+                <NotInvestmentButton expense={e} />
+              </div>
             </li>
           ))}
         </ul>

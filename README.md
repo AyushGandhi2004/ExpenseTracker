@@ -62,7 +62,7 @@ Mutual funds and stocks live in `instruments`; each buy/sell is an `investment_t
 - **Profit** uses the average-cost method: realised on sells, unrealised = units × latest price − cost of units held. Sales can't exceed the units held on that date.
 - **Prices** (`src/server/services/prices.ts`, parsers in `src/lib/price-feeds.ts`): fund NAVs from AMFI's daily `NAVAll.txt` (search and NAV history via mfapi.in); share prices from Yahoo Finance (unofficial, may be delayed). Trades pre-fill the NAV/close for their date (a holiday uses the next published NAV). Prices refresh on the Refresh button (at most every 15 min per holding) and in the daily cron. If a source is down, the last price stays; you can always type a price.
 - **Mutual fund buys** are entered by amount; units = (amount − 0.005% stamp duty) ÷ NAV, rounded to 3 decimals like AMCs — type the exact units from your statement if they differ.
-- **Converting** an expense filed under an investment-like category (Invest…, Mutual…, SIP, Stock…, Share…) turns its ledger row into `invest` (same account, amount, date — balance unchanged, spending drops) and records the buy.
+- **Converting** an expense filed under an investment-like category (Invest…, Mutual…, SIP, Stock…, Share…) turns its ledger row into `invest` (same account, amount, date — balance unchanged, spending drops) and records the buy. Recurring expenses aren't suggested, and "Not an investment" dismisses a suggestion (`transactions.not_investment`).
 
 ## API (`/api/v1`)
 

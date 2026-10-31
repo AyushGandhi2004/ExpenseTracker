@@ -217,6 +217,8 @@ export const transactions = pgTable(
     description: text(),
     source: transactionSource().notNull().default("manual"),
     recurringPaymentId: uuid().references(() => recurringPayments.id, { onDelete: "set null" }),
+    // The user said this expense isn't an investment: don't offer to convert it.
+    notInvestment: boolean().notNull().default(false),
     ...timestamps,
     deletedAt: timestamp({ withTimezone: true }),
   },

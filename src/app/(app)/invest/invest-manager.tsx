@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AddButton } from "@/components/add-button";
 import { ConvertSheet } from "@/components/invest/convert-sheet";
+import { NotInvestmentButton } from "@/components/invest/not-investment-button";
 import { pickedOf } from "@/components/invest/picked";
 import { formatUnitPrice, kindLabel, Pnl, unitsLabel } from "@/components/invest/pnl";
 import { TradeSheet } from "@/components/invest/trade-sheet";
@@ -58,20 +59,29 @@ export function InvestManager({
       <PageHeader title="Invest" action={<AddButton onClick={() => show("trade")} />} />
 
       {convertible.length > 0 && (
-        <button
-          type="button"
-          onClick={() => show("convert")}
-          className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-dashed px-4 py-3 text-left hover:bg-muted/60"
-        >
-          <TrendingUp className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-sm font-medium">
-              {convertible.length === 1 ? "1 expense looks like an investment" : `${convertible.length} expenses look like investments`}
+        <div className="mb-4 rounded-2xl border border-dashed">
+          <button
+            type="button"
+            onClick={() => show("convert")}
+            className="flex w-full items-center gap-3 rounded-t-2xl px-4 py-3 text-left hover:bg-muted/60"
+          >
+            <TrendingUp className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-sm font-medium">
+                {convertible.length === 1
+                  ? `${formatINR(convertible[0].amountPaise)} · ${convertible[0].description ?? convertible[0].categoryName} looks like an investment`
+                  : `${convertible.length} expenses look like investments`}
+              </span>
+              <span className="text-xs text-muted-foreground">Convert so it counts in your portfolio, not your spending</span>
             </span>
-            <span className="text-xs text-muted-foreground">Convert so it counts in your portfolio, not your spending</span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        </button>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </button>
+          {convertible.length === 1 && (
+            <div className="px-2 pb-2">
+              <NotInvestmentButton expense={convertible[0]} />
+            </div>
+          )}
+        </div>
       )}
 
       {!hasAny ? (
@@ -181,7 +191,7 @@ export function InvestManager({
           today={today}
         />
       )}
-      {sheet.open && sheet.kind === "convert" && (
+      {sheet.open && sheet.kind === "convert" && convertible.length > 0 && (
         <ConvertSheet
           key={sheet.key}
           open

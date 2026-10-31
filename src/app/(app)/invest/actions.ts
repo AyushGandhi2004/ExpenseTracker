@@ -40,6 +40,10 @@ export async function convertExpense(raw: unknown) {
   return runAction((user) => investments.convertExpense(user.id, convertExpenseInput.parse(raw)));
 }
 
+export async function setNotInvestment(transactionId: string, notInvestment: boolean) {
+  return runAction((user) => investments.setNotInvestment(user.id, id.parse(transactionId), z.boolean().parse(notInvestment)));
+}
+
 /** Refresh button: returns counts so the UI can say "prices unavailable" on failure. */
 export async function refreshAllPrices(): Promise<{ checked: number; updated: number; failed: number }> {
   const user = await requireUser();

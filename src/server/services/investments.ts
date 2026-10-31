@@ -550,7 +550,10 @@ export async function investmentFlows(userId: string, from: string, to: string) 
 
 const INVESTMENT_CATEGORY = /invest|mutual|\bsip\b|stock|share/i;
 
-/** Expenses filed under an investment-like category — candidates to convert. */
+/**
+ * One-off expenses filed under an investment-like category — candidates to convert. Recurring
+ * expenses are left out (a SIP would have been set up as one), as are ones the user dismissed.
+ */
 export async function listConvertibleExpenses(userId: string) {
   const rows = await db
     .select({
@@ -569,6 +572,8 @@ export async function listConvertibleExpenses(userId: string) {
         eq(transactions.userId, userId),
         eq(transactions.type, "expense"),
         isNull(transactions.deletedAt),
+        eq(transactions.notInvestment, false),
+        ne(transactions.source, "scheduled"),
         or(
           ilike(categories.name, "%invest%"),
           ilike(categories.name, "%mutual%"),
@@ -582,6 +587,16 @@ export async function listConvertibleExpenses(userId: string) {
   return rows.filter((r) => INVESTMENT_CATEGORY.test(r.categoryName));
 }
 export type ConvertibleExpense = Awaited<ReturnType<typeof listConvertibleExpenses>>[number];
+
+/** "Not an investment": stop offering to convert this expense (or undo that). */
+export async function setNotInvestment(userId: string, transactionId: string, notInvestment: boolean) {
+  const updated = await db
+    .update(transactions)
+    .set({ notInvestment })
+    .where(and(eq(transactions.id, transactionId), eq(transactions.userId, userId), eq(transactions.type, "expense")))
+    .returning({ id: transactions.id });
+  if (updated.length === 0) throw new UserError("Transaction not found.");
+}
 
 /**
  * Turns a past expense into an investment buy: the ledger row becomes `invest` (same

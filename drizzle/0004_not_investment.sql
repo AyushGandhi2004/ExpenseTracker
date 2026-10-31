@@ -1,0 +1,1 @@
+ALTER TABLE "transactions" ADD COLUMN "not_investment" boolean DEFAULT false NOT NULL;
