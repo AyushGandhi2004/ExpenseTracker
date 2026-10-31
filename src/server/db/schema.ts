@@ -325,5 +325,23 @@ export const investmentTransactions = pgTable(
   ],
 ).enableRLS();
 
+/** A monthly spending limit: for one expense category, or (category null) for all spending. */
+export const budgets = pgTable(
+  "budgets",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: ownerId(),
+    categoryId: uuid().references(() => categories.id, { onDelete: "cascade" }),
+    amountPaise: money().notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    // One per category, and one overall (nulls would otherwise count as distinct).
+    uniqueIndex("budgets_user_category_uq").on(t.userId, sql`coalesce(${t.categoryId}, '00000000-0000-0000-0000-000000000000'::uuid)`),
+    check("budgets_amount_ck", sql`${t.amountPaise} > 0`),
+    ownerPolicy("budgets"),
+  ],
+).enableRLS();
+
 export type Instrument = typeof instruments.$inferSelect;
 export type InvestmentTransaction = typeof investmentTransactions.$inferSelect;

@@ -54,6 +54,10 @@ Anything on a cycle of N days / months / years. `recurring_payments.kind` decide
 - Due payments are recorded when the app opens and by a daily Vercel Cron (`/api/cron/daily`, 00:00 IST — it also refreshes investment prices). Both are idempotent: a unique index on `(recurring_payment_id, txn_date)` makes a duplicate impossible, and a payment you delete is not re-created.
 - Editing applies from the next payment; pausing skips payments until resumed; deleting a schedule keeps the payments already recorded.
 
+## Budgets
+
+Monthly limits (`budgets`), for all spending (`category_id` null) or one expense category. A limit applies every month and is tracked against the running month on Home and `/budgets`. Only `expense` rows count, so investing and transfers don't use up a budget; recurring expenses do. "Close" starts at 80% of the limit (`src/lib/budget.ts`). Refunds aren't netted off, matching the dashboard's spending total.
+
 ## Investments
 
 Mutual funds and stocks live in `instruments`; each buy/sell is an `investment_transactions` row. Units and prices are exact decimals (scaled bigint in `src/lib/portfolio.ts`, `numeric` in Postgres) — never floats.
@@ -82,6 +86,8 @@ Authenticate with the web session cookie, or `Authorization: Bearer <Supabase ac
 | `GET /export` | CSV (same filters as `/transactions`) |
 | `GET /recurring` · `POST /recurring` | List / create recurring payments (`kind`: `expense`, `income` + `accountId`, or `sip` + `instrumentId`/`instrument`; `monthEnd`; `recordPast` to back-fill) |
 | `PATCH /recurring/:id` · `DELETE /recurring/:id` | Edit (or `{ "paused": bool }`) / delete |
+| `GET /budgets` · `POST /budgets` | This month's budgets with progress / create `{ categoryId \| null, amountPaise }` |
+| `PATCH /budgets/:id` · `DELETE /budgets/:id` | Change the limit `{ amountPaise }` / delete |
 | `GET /instruments/search` | `kind=mutual_fund\|stock&q=…` |
 | `GET /instruments/price` | Price for a trade date: `kind, schemeCode \| symbol+exchange, date` |
 | `GET /investments` · `POST /investments` | Holdings + totals / record a buy or sell (idempotent on `id`; units and prices are decimal strings) |

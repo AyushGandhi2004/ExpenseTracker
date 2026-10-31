@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, CreditCard, Download, Landmark, LogOut, Repeat, Tags, type LucideIcon } from "lucide-react";
+import { ChevronRight, CreditCard, Download, Landmark, LogOut, PiggyBank, Repeat, Tags, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/server/auth";
 import { listAccounts } from "@/server/services/accounts";
 import { listCategories } from "@/server/services/categories";
 import { listPaymentMethods } from "@/server/services/payment-methods";
+import { getBudgets } from "@/server/services/budgets";
 import { listRecurring } from "@/server/services/recurring";
 import { AppearancePicker } from "./appearance";
 
@@ -13,11 +14,12 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [accounts, methods, categories, recurring] = await Promise.all([
+  const [accounts, methods, categories, recurring, budgets] = await Promise.all([
     listAccounts(user.id),
     listPaymentMethods(user.id),
     listCategories(user.id),
     listRecurring(user.id),
+    getBudgets(user.id),
   ]);
   const active = <T extends { isArchived: boolean }>(rows: T[]) => rows.filter((r) => !r.isArchived).length;
 
@@ -30,6 +32,12 @@ export default async function SettingsPage() {
       label: "Recurring",
       detail: `${recurring.filter((r) => !r.isPaused && r.nextDueDate).length} active`,
       icon: Repeat,
+    },
+    {
+      href: "/budgets",
+      label: "Budgets",
+      detail: `${budgets.byCategory.length + (budgets.overall ? 1 : 0)} set`,
+      icon: PiggyBank,
     },
   ];
 

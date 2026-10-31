@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { z } from "zod";
 import { AppIcon, IconBadge } from "@/components/app-icon";
+import { BudgetCard } from "@/components/budgets/budget-card";
 import { BreakdownList } from "@/components/dashboard/breakdown-list";
 import { DailyChart } from "@/components/dashboard/daily-chart";
 import { DashboardCard, StatTile } from "@/components/dashboard/dashboard-card";
@@ -18,6 +19,7 @@ import { formatINR } from "@/lib/money";
 import { paymentMethodIcon } from "@/lib/validators/settings";
 import { requireUser } from "@/server/auth";
 import { getDashboard } from "@/server/services/analytics";
+import { getBudgets } from "@/server/services/budgets";
 import { listHoldings } from "@/server/services/investments";
 import { listUpcoming } from "@/server/services/recurring";
 import { listRecentTransactions } from "@/server/services/transactions";
@@ -33,11 +35,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const { period: kind, anchor } = params.parse(await searchParams);
   const period = dashboardPeriod(kind, anchor && anchor <= today ? anchor : today, today);
 
-  const [data, recent, recurring, holdings] = await Promise.all([
+  const [data, recent, recurring, holdings, budgets] = await Promise.all([
     getDashboard(user.id, period),
     listRecentTransactions(user.id, 5),
     listUpcoming(user.id, 7, today),
     listHoldings(user.id),
+    getBudgets(user.id, today),
   ]);
   const portfolio = holdings.summary;
   const hasPortfolio = holdings.open.length > 0 || data.invested > 0;
@@ -120,6 +123,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           />
         </div>
       )}
+
+      {/* Limits are tracked against the running month only. */}
+      {kind === "month" && period.isCurrent && <BudgetCard budgets={budgets} />}
 
       {data.spent === 0 ? (
         <p className="mb-4 rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
